@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import AppIcon from '../components/AppIcon';
 import ClubsScreen from '../screens/student/ClubsScreen';
+import ClubDetailsScreen from '../screens/student/ClubDetailsScreen';
 import HomeScreen from '../screens/student/HomeScreen';
 import { EventsScreen } from '../screens/student/ProfileScreen';
 import ProfileScreen from '../screens/student/ProfileScreen';
@@ -67,7 +68,7 @@ export default function StudentNavigator() {
       }}
     >
       <Stack.Screen component={StudentTabs} name="StudentTabs" options={{ headerShown: false }} />
-      <Stack.Screen component={PlaceholderScreen} name="ClubDetails" />
+      <Stack.Screen component={ClubDetailsScreen} name="ClubDetails" options={{ title: 'Club Details' }} />
       <Stack.Screen component={PlaceholderScreen} name="EventDetails" />
       <Stack.Screen component={PlaceholderScreen} name="MyClubs" />
       <Stack.Screen component={PlaceholderScreen} name="MyEvents" />

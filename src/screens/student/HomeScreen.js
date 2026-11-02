@@ -99,7 +99,7 @@ export default function HomeScreen({ navigation }) {
           <SectionHeader onPress={() => navigation.navigate('Clubs')} title="Popular Clubs" />
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {filteredClubs.map((club) => (
-              <ClubCard club={club} key={club.id} onPress={() => navigation.navigate('ClubDetails', { club })} />
+              <ClubCard club={club} key={club.id} onPress={() => navigation.navigate('ClubDetails', { clubId: club.id })} />
             ))}
           </ScrollView>
           {!filteredClubs.length ? (
@@ -128,7 +128,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.section}>
           <SectionHeader onPress={() => navigation.navigate('MyClubs')} title="My Clubs" />
           {sampleMyClubs.length ? sampleMyClubs.map((club) => (
-            <Pressable key={club.id} onPress={() => navigation.navigate('ClubDetails', { club })} style={styles.myClub}>
+            <Pressable key={club.id} onPress={() => navigation.navigate('ClubDetails', { clubId: club.id })} style={styles.myClub}>
               <Text style={styles.myClubName}>{club.name}</Text>
               <Text style={styles.myClubCategory}>{club.category}</Text>
             </Pressable>
