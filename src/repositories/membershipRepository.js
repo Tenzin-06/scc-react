@@ -1,11 +1,15 @@
 import {
-  deleteDoc,
   collection,
+  collectionGroup,
+  deleteDoc,
   doc,
   getCountFromServer,
   getDoc,
+  getDocs,
+  query,
   runTransaction,
   serverTimestamp,
+  where,
 } from 'firebase/firestore';
 
 import { db } from '../services/firebase';
@@ -31,20 +35,25 @@ function getMembershipErrorMessage(error, operation) {
   switch (error?.code) {
     case 'permission-denied':
     case 'firestore/permission-denied':
-      return 'You do not have permission to change this membership.';
+      return 'You do not have permission to perform this action.';
+    case 'unauthenticated':
+    case 'auth/id-token-expired':
+    case 'auth/user-token-expired':
+      return 'Your session has expired. Please log in again.';
     case 'unavailable':
+    case 'deadline-exceeded':
+    case 'failed-precondition':
+    case 'auth/network-request-failed':
     case 'firestore/unavailable':
-      return 'Unable to reach the membership database. Please try again.';
+      return 'Unable to complete the membership request. Please check your connection and try again.';
     case 'firestore/membership-exists':
       return 'You are already a member of this club.';
     case 'firestore/membership-not-found':
       return 'You are not a member of this club.';
     default:
-      return operation === 'check'
-        ? 'Unable to check membership status.'
-        : operation === 'leave'
-          ? 'Unable to leave this club. Please try again.'
-          : 'Unable to join this club. Please try again.';
+      return operation === 'list'
+        ? 'Unable to load your clubs. Please try again.'
+        : 'Something went wrong. Please try again.';
   }
 }
 
@@ -121,5 +130,29 @@ export async function getClubMemberCount(clubId) {
     return countSnapshot.data().count;
   } catch (error) {
     throw createMembershipError(getMembershipErrorMessage(error, 'check'), error?.code);
+  }
+}
+
+export async function getJoinedClubs(userId) {
+  validateId(userId, 'user ID');
+
+  try {
+    const membershipSnapshot = await getDocs(
+      query(collectionGroup(db, 'members'), where('userId', '==', userId.trim())),
+    );
+    const clubs = await Promise.all(
+      membershipSnapshot.docs.map(async (membershipSnapshotItem) => {
+        const clubId = membershipSnapshotItem.ref.parent.parent?.id;
+        if (!clubId) {
+          return null;
+        }
+
+        return getClubById(clubId);
+      }),
+    );
+
+    return clubs.filter(Boolean);
+  } catch (error) {
+    throw createMembershipError(getMembershipErrorMessage(error, 'list'), error?.code);
   }
 }

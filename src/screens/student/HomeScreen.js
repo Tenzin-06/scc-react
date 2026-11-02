@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,6 +8,7 @@ import ClubCard from '../../components/ClubCard';
 import EventCard from '../../components/EventCard';
 import SectionHeader from '../../components/SectionHeader';
 import { useAuth } from '../../contexts/AuthContext';
+import { getJoinedClubs } from '../../repositories/membershipRepository';
 import { colors, radii, spacing, typography } from '../../theme';
 
 const samplePopularClubs = [
@@ -54,12 +55,32 @@ const sampleAnnouncements = [
   },
 ];
 
-const sampleMyClubs = [samplePopularClubs[0]];
-
 export default function HomeScreen({ navigation }) {
   const { user, userProfile } = useAuth();
   const [clubSearch, setClubSearch] = useState('');
+  const [myClubs, setMyClubs] = useState([]);
+  const [myClubsError, setMyClubsError] = useState('');
   const displayName = userProfile?.fullName || user?.displayName || 'Student';
+  const loadMyClubs = useCallback(async () => {
+    if (!user?.uid) {
+      setMyClubs([]);
+      setMyClubsError('');
+      return;
+    }
+
+    try {
+      setMyClubsError('');
+      setMyClubs(await getJoinedClubs(user.uid));
+    } catch (error) {
+      setMyClubs([]);
+      setMyClubsError(error.message || 'Unable to load your clubs.');
+    }
+  }, [user?.uid]);
+
+  useEffect(() => {
+    loadMyClubs();
+  }, [loadMyClubs]);
+
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -127,7 +148,7 @@ export default function HomeScreen({ navigation }) {
 
         <View style={styles.section}>
           <SectionHeader onPress={() => navigation.navigate('MyClubs')} title="My Clubs" />
-          {sampleMyClubs.length ? sampleMyClubs.map((club) => (
+          {myClubsError ? <Text style={styles.empty}>{myClubsError}</Text> : myClubs.length ? myClubs.map((club) => (
             <Pressable key={club.id} onPress={() => navigation.navigate('ClubDetails', { clubId: club.id })} style={styles.myClub}>
               <Text style={styles.myClubName}>{club.name}</Text>
               <Text style={styles.myClubCategory}>{club.category}</Text>
