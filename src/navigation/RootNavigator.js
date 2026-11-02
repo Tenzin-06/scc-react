@@ -35,6 +35,26 @@ function MissingProfileScreen({ onLogout, onRetry }) {
   );
 }
 
+function AccessDeniedScreen({ onLogout, onRetry }) {
+  return (
+    <View style={styles.centered}>
+      <Text style={styles.title}>Access unavailable</Text>
+      <Text style={styles.message}>
+        Your account does not have a valid application role. Please contact an administrator or
+        try loading your profile again.
+      </Text>
+      <View style={styles.actions}>
+        <Pressable onPress={onRetry} style={styles.primaryButton}>
+          <Text style={styles.primaryButtonText}>Try again</Text>
+        </Pressable>
+        <Pressable onPress={onLogout} style={styles.secondaryButton}>
+          <Text style={styles.secondaryButtonText}>Log out</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 export default function RootNavigator() {
   const {
     isAuthenticated,
@@ -43,6 +63,7 @@ export default function RootNavigator() {
     profileError,
     profileLoading,
     refreshUserProfile,
+    role,
     userProfile,
   } = useAuth();
 
@@ -58,7 +79,7 @@ export default function RootNavigator() {
     return <MissingProfileScreen onLogout={logout} onRetry={refreshUserProfile} />;
   }
 
-  switch (userProfile.role) {
+  switch (role) {
     case 'president':
       return <PresidentNavigator />;
     case 'admin':
@@ -66,7 +87,7 @@ export default function RootNavigator() {
     case 'student':
       return <StudentNavigator />;
     default:
-      return <MissingProfileScreen onLogout={logout} onRetry={refreshUserProfile} />;
+      return <AccessDeniedScreen onLogout={logout} onRetry={refreshUserProfile} />;
   }
 }
 

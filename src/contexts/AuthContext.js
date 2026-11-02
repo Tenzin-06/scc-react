@@ -70,19 +70,27 @@ export function AuthProvider({ children }) {
   }
 
   const value = useMemo(
-    () => ({
-      user,
-      userProfile,
-      loading,
-      profileLoading,
-      profileError,
-      isAuthenticated: Boolean(user),
-      login: loginUser,
-      register: registerUser,
-      logout: logoutUser,
-      resetPassword,
-      refreshUserProfile,
-    }),
+    () => {
+      const role = typeof userProfile?.role === 'string'
+        ? userProfile.role.trim().toLowerCase()
+        : null;
+
+      return {
+        user,
+        userProfile,
+        role,
+        presidentOf: userProfile?.presidentOf || null,
+        loading,
+        profileLoading,
+        profileError,
+        isAuthenticated: Boolean(user),
+        login: loginUser,
+        register: registerUser,
+        logout: logoutUser,
+        resetPassword,
+        refreshUserProfile,
+      };
+    },
     [loading, profileError, profileLoading, user, userProfile],
   );
 
