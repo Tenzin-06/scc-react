@@ -6,7 +6,8 @@ import ClubsScreen from '../screens/student/ClubsScreen';
 import ClubDetailsScreen from '../screens/student/ClubDetailsScreen';
 import HomeScreen from '../screens/student/HomeScreen';
 import MyClubsScreen from '../screens/student/MyClubsScreen';
-import { EventsScreen } from '../screens/student/ProfileScreen';
+import EventDetailsScreen from '../screens/student/EventDetailsScreen';
+import EventsScreen from '../screens/student/EventsScreen';
 import ProfileScreen from '../screens/student/ProfileScreen';
 import { colors, typography } from '../theme';
 import PlaceholderScreen from './PlaceholderScreen';
@@ -70,7 +71,7 @@ export default function StudentNavigator() {
     >
       <Stack.Screen component={StudentTabs} name="StudentTabs" options={{ headerShown: false }} />
       <Stack.Screen component={ClubDetailsScreen} name="ClubDetails" options={{ title: 'Club Details' }} />
-      <Stack.Screen component={PlaceholderScreen} name="EventDetails" />
+      <Stack.Screen component={EventDetailsScreen} name="EventDetails" options={{ title: 'Event Details' }} />
       <Stack.Screen component={MyClubsScreen} name="MyClubs" options={{ title: 'My Clubs' }} />
       <Stack.Screen component={PlaceholderScreen} name="MyEvents" />
       <Stack.Screen component={PlaceholderScreen} name="EditProfile" />

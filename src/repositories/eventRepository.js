@@ -51,10 +51,6 @@ function validateEventData(eventData = {}) {
   }
 }
 
-function normalizeText(value) {
-  return typeof value === 'string' ? value.trim() : value;
-}
-
 function normalizeImageUrl(value) {
   if (value === undefined || value === null) {
     return '';

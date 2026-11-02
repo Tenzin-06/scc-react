@@ -134,7 +134,7 @@ export default function HomeScreen({ navigation }) {
             <EventCard
               event={event}
               key={event.id}
-              onPress={() => navigation.navigate('EventDetails', { event })}
+              onPress={() => navigation.navigate('EventDetails', { eventId: event.id })}
             />
           ))}
         </View>
