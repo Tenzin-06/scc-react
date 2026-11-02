@@ -77,6 +77,15 @@ export default function AppIcon({ color = '#666666', name, size = 20 }) {
     );
   }
 
+  if (name === 'search') {
+    return (
+      <View style={[styles.icon, iconStyle]}>
+        <View style={[styles.searchLens, { borderColor: color }]} />
+        <View style={[styles.searchHandle, { backgroundColor: color }]} />
+      </View>
+    );
+  }
+
   return <View style={[styles.icon, iconStyle]} />;
 }
 
@@ -219,5 +228,22 @@ const styles = StyleSheet.create({
     height: '14%',
     position: 'absolute',
     width: '70%',
+  },
+  searchLens: {
+    borderRadius: 99,
+    borderWidth: 1.5,
+    height: '58%',
+    left: '12%',
+    position: 'absolute',
+    top: '10%',
+    width: '58%',
+  },
+  searchHandle: {
+    height: 1.5,
+    position: 'absolute',
+    right: '8%',
+    top: '73%',
+    transform: [{ rotate: '45deg' }],
+    width: '36%',
   },
 });

@@ -1,13 +1,14 @@
-import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AnnouncementCard from '../../components/AnnouncementCard';
+import AppIcon from '../../components/AppIcon';
 import ClubCard from '../../components/ClubCard';
 import EventCard from '../../components/EventCard';
 import SectionHeader from '../../components/SectionHeader';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, spacing, typography } from '../../theme';
+import { colors, radii, spacing, typography } from '../../theme';
 
 const samplePopularClubs = [
   {
@@ -57,6 +58,7 @@ const sampleMyClubs = [samplePopularClubs[0]];
 
 export default function HomeScreen({ navigation }) {
   const { user, userProfile } = useAuth();
+  const [clubSearch, setClubSearch] = useState('');
   const displayName = userProfile?.fullName || user?.displayName || 'Student';
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -64,6 +66,16 @@ export default function HomeScreen({ navigation }) {
     if (hour < 18) return 'Good afternoon';
     return 'Good evening';
   }, []);
+  const filteredClubs = useMemo(() => {
+    const query = clubSearch.trim().toLowerCase();
+    if (!query) {
+      return samplePopularClubs;
+    }
+
+    return samplePopularClubs.filter((club) =>
+      `${club.name} ${club.category} ${club.description}`.toLowerCase().includes(query),
+    );
+  }, [clubSearch]);
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
@@ -73,12 +85,26 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.subtitle}>Welcome back to Student Club Connect.</Text>
 
         <View style={styles.section}>
+          <View style={styles.searchContainer}>
+            <AppIcon color={colors.secondaryText} name="search" size={19} />
+            <TextInput
+              accessibilityLabel="Search popular clubs"
+              onChangeText={setClubSearch}
+              placeholder="Search clubs"
+              placeholderTextColor={colors.secondaryText}
+              style={styles.searchInput}
+              value={clubSearch}
+            />
+          </View>
           <SectionHeader onPress={() => navigation.navigate('Clubs')} title="Popular Clubs" />
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {samplePopularClubs.map((club) => (
+            {filteredClubs.map((club) => (
               <ClubCard club={club} key={club.id} onPress={() => navigation.navigate('ClubDetails', { club })} />
             ))}
           </ScrollView>
+          {!filteredClubs.length ? (
+            <Text style={styles.emptySearch}>No clubs match your search.</Text>
+          ) : null}
         </View>
 
         <View style={styles.section}>
@@ -136,6 +162,24 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     ...typography.secondary,
   },
+  searchContainer: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginBottom: spacing.lg,
+    minHeight: 48,
+    paddingHorizontal: spacing.md,
+  },
+  searchInput: {
+    color: colors.text,
+    flex: 1,
+    marginLeft: spacing.sm,
+    paddingVertical: spacing.sm,
+    ...typography.body,
+  },
   section: {
     marginTop: spacing.xxl,
   },
@@ -157,6 +201,11 @@ const styles = StyleSheet.create({
   },
   empty: {
     color: colors.secondaryText,
+    ...typography.secondary,
+  },
+  emptySearch: {
+    color: colors.secondaryText,
+    marginTop: spacing.md,
     ...typography.secondary,
   },
 });
