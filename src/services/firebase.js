@@ -1,5 +1,6 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getAuth, getReactNativePersistence, initializeAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const requiredConfig = {
@@ -39,7 +40,22 @@ let auth;
 let db;
 
 try {
-  auth = getAuth(firebaseApp);
+  auth = initializeAuth(firebaseApp, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+} catch (error) {
+  if (error?.code === 'auth/already-initialized') {
+    auth = getAuth(firebaseApp);
+  } else {
+    throw new Error(
+      `Firebase Authentication failed to initialize. ${
+        error instanceof Error ? error.message : 'Unknown authentication error.'
+      }`,
+    );
+  }
+}
+
+try {
   db = getFirestore(firebaseApp);
 } catch (error) {
   throw new Error(
