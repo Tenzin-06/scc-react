@@ -1,4 +1,12 @@
-import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
 
 import { db } from '../services/firebase';
 
@@ -84,6 +92,54 @@ export async function getUserProfile(uid) {
     return snapshot.exists() ? snapshot.data() : null;
   } catch (error) {
     throw createProfileError(getProfileErrorMessage(error, 'load'), error?.code);
+  }
+}
+
+export async function getAllUserProfiles() {
+  try {
+    const snapshot = await getDocs(collection(db, 'users'));
+    return snapshot.docs.map((userSnapshot) => ({
+      ...userSnapshot.data(),
+      id: userSnapshot.id,
+    }));
+  } catch (error) {
+    throw createProfileError(getProfileErrorMessage(error, 'load'), error?.code);
+  }
+}
+
+export async function updateUserProfileAsAdmin(uid, updatedData) {
+  validateUid(uid);
+
+  const permittedFields = new Set([
+    'fullName',
+    'studentId',
+    'email',
+    'programme',
+    'department',
+    'semester',
+    'phone',
+  ]);
+  const permittedUpdates = Object.entries(updatedData || {}).reduce(
+    (updates, [field, value]) => {
+      if (permittedFields.has(field) && value !== undefined) {
+        updates[field] = typeof value === 'string' ? value.trim() : value;
+      }
+      return updates;
+    },
+    {},
+  );
+
+  if (Object.keys(permittedUpdates).length === 0) {
+    throw createProfileError('No permitted profile changes were provided.', 'firestore/no-changes');
+  }
+
+  try {
+    await updateDoc(doc(db, 'users', uid.trim()), {
+      ...permittedUpdates,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    throw createProfileError(getProfileErrorMessage(error, 'update'), error?.code);
   }
 }
 

@@ -162,6 +162,12 @@ export async function updateAnnouncement(announcementId, data = {}) {
     }
     updates.message = data.message.trim();
   }
+  if (data.clubId !== undefined) {
+    if (typeof data.clubId !== 'string' || !data.clubId.trim()) {
+      throw createAnnouncementError('A club ID is required.', 'firestore/invalid-club-id');
+    }
+    updates.clubId = data.clubId.trim();
+  }
   if (!Object.keys(updates).length) {
     throw createAnnouncementError('No announcement changes were provided.', 'firestore/no-announcement-changes');
   }
