@@ -93,10 +93,6 @@ function EmptyTabScreen({ title }) {
   );
 }
 
-export function ClubsScreen() {
-  return <EmptyTabScreen title="Clubs" />;
-}
-
 export function EventsScreen() {
   return <EmptyTabScreen title="Events" />;
 }

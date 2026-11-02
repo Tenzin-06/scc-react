@@ -2,8 +2,9 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import AppIcon from '../components/AppIcon';
+import ClubsScreen from '../screens/student/ClubsScreen';
 import HomeScreen from '../screens/student/HomeScreen';
-import { ClubsScreen, EventsScreen } from '../screens/student/ProfileScreen';
+import { EventsScreen } from '../screens/student/ProfileScreen';
 import ProfileScreen from '../screens/student/ProfileScreen';
 import { colors, typography } from '../theme';
 import PlaceholderScreen from './PlaceholderScreen';

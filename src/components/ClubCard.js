@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import AppIcon from './AppIcon';
 import { colors, radii, spacing, typography } from '../theme';
@@ -6,9 +6,13 @@ import { colors, radii, spacing, typography } from '../theme';
 export default function ClubCard({ club, onPress }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={styles.card}>
-      <View style={styles.imagePlaceholder}>
-        <AppIcon color={colors.primary} name="clubs" size={30} />
-      </View>
+      {club.imageUrl ? (
+        <Image source={{ uri: club.imageUrl }} style={styles.image} />
+      ) : (
+        <View style={styles.imagePlaceholder}>
+          <AppIcon color={colors.primary} name="clubs" size={30} />
+        </View>
+      )}
       <Text numberOfLines={1} style={styles.name}>{club.name}</Text>
       <Text style={styles.category}>{club.category}</Text>
       <Text numberOfLines={2} style={styles.description}>{club.description}</Text>
@@ -33,6 +37,12 @@ const styles = StyleSheet.create({
     height: 82,
     justifyContent: 'center',
     marginBottom: spacing.md,
+  },
+  image: {
+    borderRadius: radii.md,
+    height: 82,
+    marginBottom: spacing.md,
+    width: '100%',
   },
   name: {
     color: colors.text,
