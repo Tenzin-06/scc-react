@@ -1,16 +1,15 @@
 import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 
 import { AuthButton } from '../../components/auth/AuthButton';
 import { AuthHeader, AuthMessage, AuthTitle } from '../../components/auth/AuthHeader';
 import { AuthInput } from '../../components/auth/AuthInput';
 import { AuthScreen } from '../../components/auth/AuthScreen';
-import { auth } from '../../services/firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, typography } from '../../theme';
-import { getFirebaseAuthMessage, validateEmail } from './validation';
 
 export default function SignupScreen({ navigation }) {
+  const { register } = useAuth();
   const [form, setForm] = useState({
     fullName: '',
     studentId: '',
@@ -33,32 +32,11 @@ export default function SignupScreen({ navigation }) {
       return;
     }
 
-    if (!validateEmail(form.email)) {
-      setError('Enter a valid email address.');
-      return;
-    }
-
-    if (form.password.length < 6) {
-      setError('Password must contain at least 6 characters.');
-      return;
-    }
-
-    if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-
     setLoading(true);
     try {
-      const credential = await createUserWithEmailAndPassword(
-        auth,
-        form.email.trim(),
-        form.password,
-      );
-      await updateProfile(credential.user, { displayName: form.fullName.trim() });
-      navigation.replace('Login');
+      await register(form);
     } catch (authError) {
-      setError(getFirebaseAuthMessage(authError));
+      setError(authError.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -97,6 +75,7 @@ export default function SignupScreen({ navigation }) {
         onChangeText={(value) => updateField('password', value)}
         placeholder="Password"
         secureTextEntry
+        showPasswordToggle
         value={form.password}
       />
       <AuthInput
@@ -104,6 +83,7 @@ export default function SignupScreen({ navigation }) {
         onChangeText={(value) => updateField('confirmPassword', value)}
         placeholder="Confirm password"
         secureTextEntry
+        showPasswordToggle
         value={form.confirmPassword}
       />
       <AuthButton loading={loading} onPress={handleSignup} title="Create Account" />

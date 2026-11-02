@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { sendPasswordResetEmail } from 'firebase/auth';
 
 import { AuthButton } from '../../components/auth/AuthButton';
 import { AuthHeader, AuthMessage, AuthTitle } from '../../components/auth/AuthHeader';
 import { AuthInput } from '../../components/auth/AuthInput';
 import { AuthScreen } from '../../components/auth/AuthScreen';
-import { auth } from '../../services/firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, typography } from '../../theme';
-import { getFirebaseAuthMessage, validateEmail } from './validation';
+import { validateEmail } from './validation';
 
 export default function ForgotPasswordScreen({ navigation }) {
+  const { resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -32,10 +32,10 @@ export default function ForgotPasswordScreen({ navigation }) {
 
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email.trim());
+      await resetPassword(email);
       setSuccess('Password reset instructions have been sent to your email.');
     } catch (authError) {
-      setError(getFirebaseAuthMessage(authError));
+      setError(authError.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }

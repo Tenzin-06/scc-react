@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { signInWithEmailAndPassword } from 'firebase/auth';
 
 import { AuthButton } from '../../components/auth/AuthButton';
 import { AuthHeader, AuthMessage, AuthTitle } from '../../components/auth/AuthHeader';
 import { AuthInput } from '../../components/auth/AuthInput';
 import { AuthScreen } from '../../components/auth/AuthScreen';
-import { auth } from '../../services/firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, typography } from '../../theme';
 import { getFirebaseAuthMessage, validateEmail } from './validation';
 
 export default function LoginScreen({ navigation }) {
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -31,9 +31,9 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+      await login(email, password);
     } catch (authError) {
-      setError(getFirebaseAuthMessage(authError));
+      setError(authError.message || getFirebaseAuthMessage(authError));
     } finally {
       setLoading(false);
     }
@@ -61,6 +61,7 @@ export default function LoginScreen({ navigation }) {
         onChangeText={setPassword}
         placeholder="Password"
         secureTextEntry
+        showPasswordToggle
         value={password}
       />
       <AuthButton loading={loading} onPress={handleLogin} title="Login" />
