@@ -5,9 +5,8 @@ import {
   signOut,
   updateProfile,
 } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-
-import { auth, db } from '../services/firebase';
+import { auth } from '../services/firebase';
+import { createUserProfile } from './userRepository';
 
 function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -96,14 +95,7 @@ export async function registerUser(userData) {
     credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
     await updateProfile(credential.user, { displayName: fullName.trim() });
 
-    await setDoc(doc(db, 'users', credential.user.uid), {
-      uid: credential.user.uid,
-      fullName: fullName.trim(),
-      studentId: studentId.trim(),
-      email: email.trim(),
-      role: 'student',
-      createdAt: serverTimestamp(),
-    });
+    await createUserProfile(credential.user.uid, userData);
 
     return credential.user;
   } catch (error) {
@@ -166,13 +158,4 @@ export async function resetPassword(email) {
 
 export function getCurrentUser() {
   return auth.currentUser;
-}
-
-export async function getUserProfile(user) {
-  if (!user) {
-    return null;
-  }
-
-  const snapshot = await getDoc(doc(db, 'users', user.uid));
-  return snapshot.exists() ? snapshot.data() : null;
 }
