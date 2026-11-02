@@ -93,10 +93,6 @@ function EmptyTabScreen({ title }) {
   );
 }
 
-export function HomeScreen() {
-  return <EmptyTabScreen title="Home" />;
-}
-
 export function ClubsScreen() {
   return <EmptyTabScreen title="Clubs" />;
 }
