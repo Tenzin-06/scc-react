@@ -54,18 +54,38 @@ export default function EventDetailsScreen({ navigation, route }) {
   }, [loadDetails]);
 
   async function handleRegistration() {
+    if (registered) {
+      Alert.alert(
+        'Cancel Registration?',
+        'Are you sure you want to cancel your registration for this event?',
+        [
+          { text: 'Keep Registration', style: 'cancel' },
+          { text: 'Cancel Registration', style: 'destructive', onPress: cancelRegistration },
+        ],
+      );
+      return;
+    }
+
     setActionLoading(true);
     setMessage('');
     try {
-      if (registered) {
-        await cancelEventRegistration(user.uid, eventId);
-        setRegistered(false);
-        setMessage('Your event registration has been cancelled.');
-      } else {
-        await registerForEvent(user.uid, eventId);
-        setRegistered(true);
-        setMessage('You have successfully registered for this event.');
-      }
+      await registerForEvent(user.uid, eventId);
+      setRegistered(true);
+      setMessage('You have successfully registered for this event.');
+    } catch (registrationError) {
+      setMessage(registrationError.message || 'Something went wrong. Please try again.');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function cancelRegistration() {
+    setActionLoading(true);
+    setMessage('');
+    try {
+      await cancelEventRegistration(user.uid, eventId);
+      setRegistered(false);
+      setMessage('Your event registration has been cancelled.');
     } catch (registrationError) {
       setMessage(registrationError.message || 'Something went wrong. Please try again.');
     } finally {

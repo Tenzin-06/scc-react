@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppIcon from '../../components/AppIcon';
 import { useAuth } from '../../contexts/AuthContext';
+import { getRegisteredEvents } from '../../repositories/eventRegistrationRepository';
 import { colors, radii, spacing, typography } from '../../theme';
 
 const menuItems = [
@@ -27,8 +29,29 @@ function ProfileRow({ icon, label, onPress }) {
 
 export default function ProfileScreen({ navigation }) {
   const { logout, user, userProfile } = useAuth();
+  const [registeredEventCount, setRegisteredEventCount] = useState(null);
   const displayName = userProfile?.fullName || user?.displayName || 'Student';
   const role = userProfile?.role === 'admin' ? 'Administrator' : 'Student';
+
+  useEffect(() => {
+    let active = true;
+    if (!user?.uid) {
+      setRegisteredEventCount(null);
+      return undefined;
+    }
+
+    getRegisteredEvents(user.uid)
+      .then((events) => {
+        if (active) setRegisteredEventCount(events.length);
+      })
+      .catch(() => {
+        if (active) setRegisteredEventCount(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?.uid]);
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.container}>
@@ -53,7 +76,7 @@ export default function ProfileScreen({ navigation }) {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.stat}>
-            <Text style={styles.statValue}>5</Text>
+            <Text style={styles.statValue}>{registeredEventCount ?? '—'}</Text>
             <Text style={styles.statLabel}>Events Registered</Text>
           </View>
         </View>

@@ -1,9 +1,13 @@
 import {
+  collection,
   deleteDoc,
   doc,
+  getDocs,
   getDoc,
+  query,
   runTransaction,
   serverTimestamp,
+  where,
 } from 'firebase/firestore';
 
 import { db } from '../services/firebase';
@@ -33,6 +37,10 @@ function getRegistrationErrorMessage(error) {
     case 'permission-denied':
     case 'firestore/permission-denied':
       return 'You do not have permission to manage this registration.';
+    case 'unauthenticated':
+    case 'auth/id-token-expired':
+    case 'auth/user-token-expired':
+      return 'Your session has expired. Please log in again.';
     case 'unavailable':
     case 'deadline-exceeded':
     case 'auth/network-request-failed':
@@ -79,7 +87,15 @@ export async function cancelEventRegistration(userId, eventId) {
   validateIds(userId, eventId);
 
   try {
-    await deleteDoc(registrationRef(userId, eventId));
+    const ref = registrationRef(userId, eventId);
+    if (!(await getDoc(ref)).exists()) {
+      throw createRegistrationError(
+        'You are not registered for this event.',
+        'firestore/registration-not-found',
+      );
+    }
+
+    await deleteDoc(ref);
     return { eventId: eventId.trim(), userId: userId.trim(), registered: false };
   } catch (error) {
     throw createRegistrationError(getRegistrationErrorMessage(error), error?.code);
@@ -91,6 +107,43 @@ export async function checkEventRegistration(userId, eventId) {
 
   try {
     return (await getDoc(registrationRef(userId, eventId))).exists();
+  } catch (error) {
+    throw createRegistrationError(getRegistrationErrorMessage(error), error?.code);
+  }
+}
+
+export async function getRegisteredEvents(userId) {
+  if (typeof userId !== 'string' || !userId.trim()) {
+    throw createRegistrationError('A user ID is required.', 'firestore/invalid-user-id');
+  }
+
+  try {
+    const registrationSnapshot = await getDocs(
+      query(collection(db, 'eventRegistrations'), where('userId', '==', userId.trim())),
+    );
+    const registrations = registrationSnapshot.docs.map((registration) => ({
+      ...registration.data(),
+      id: registration.id,
+    }));
+    const uniqueEventIds = [...new Set(
+      registrations
+        .map((registration) => registration.eventId)
+        .filter((eventId) => typeof eventId === 'string' && eventId.trim()),
+    )];
+    const events = await Promise.all(uniqueEventIds.map((eventId) => getEventById(eventId)));
+    const eventsById = new Map(events.filter(Boolean).map((event) => [event.id, event]));
+
+    return registrations.reduce((registeredEvents, registration) => {
+      const event = eventsById.get(registration.eventId);
+      if (event) {
+        registeredEvents.push({
+          ...event,
+          registrationId: registration.id,
+          registeredAt: registration.registeredAt,
+        });
+      }
+      return registeredEvents;
+    }, []);
   } catch (error) {
     throw createRegistrationError(getRegistrationErrorMessage(error), error?.code);
   }
