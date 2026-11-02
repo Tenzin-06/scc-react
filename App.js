@@ -1,13 +1,22 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
+import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import AppIcon from './src/components/AppIcon';
 import { useAuth, AuthProvider } from './src/contexts/AuthContext';
 import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
 import LoginScreen from './src/screens/auth/LoginScreen';
 import SignupScreen from './src/screens/auth/SignupScreen';
+import {
+  ClubsScreen,
+  EventsScreen,
+  HomeScreen,
+} from './src/screens/student/ProfileScreen';
+import ProfileScreen from './src/screens/student/ProfileScreen';
+import { colors, spacing, typography } from './src/theme';
 
 const Stack = createNativeStackNavigator();
 
@@ -19,16 +28,44 @@ function LoadingScreen() {
   );
 }
 
+const tabs = [
+  { key: 'Home', label: 'Home', icon: 'home', component: HomeScreen },
+  { key: 'Clubs', label: 'Clubs', icon: 'clubs', component: ClubsScreen },
+  { key: 'Events', label: 'Events', icon: 'events', component: EventsScreen },
+  { key: 'Profile', label: 'Profile', icon: 'profile', component: ProfileScreen },
+];
+
 function SignedInScreen() {
-  const { logout, user } = useAuth();
+  const [activeTab, setActiveTab] = useState('Profile');
+  const activeTabConfig = tabs.find((tab) => tab.key === activeTab);
+  const ActiveScreen = activeTabConfig.component;
 
   return (
-    <View style={styles.signedInContainer}>
-      <Text style={styles.signedInTitle}>You are signed in</Text>
-      <Text style={styles.signedInText}>{user?.email}</Text>
-      <Pressable onPress={logout} style={styles.logoutButton}>
-        <Text style={styles.logoutText}>Log out</Text>
-      </Pressable>
+    <View style={styles.appContainer}>
+      <ActiveScreen />
+      <View style={styles.tabBar}>
+        {tabs.map((tab) => {
+          const isActive = tab.key === activeTab;
+          return (
+            <Pressable
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+              key={tab.key}
+              onPress={() => setActiveTab(tab.key)}
+              style={styles.tab}
+            >
+              <AppIcon
+                color={isActive ? colors.primary : colors.secondaryText}
+                name={tab.icon}
+                size={21}
+              />
+              <Text style={[styles.tabLabel, isActive && styles.activeTabText]}>
+                {tab.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -67,31 +104,35 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  signedInContainer: {
+  appContainer: {
+    backgroundColor: colors.background,
+    flex: 1,
+  },
+  tabBar: {
+    alignItems: 'stretch',
+    backgroundColor: colors.surface,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    minHeight: 62,
+    paddingBottom: spacing.xs,
+    paddingTop: spacing.xs,
+  },
+  tab: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     flex: 1,
     justifyContent: 'center',
-    padding: 24,
   },
-  signedInTitle: {
-    color: '#111111',
-    fontSize: 24,
-    fontWeight: '700',
+  tabIcon: {
+    color: colors.secondaryText,
+    fontSize: 21,
+    height: 25,
   },
-  signedInText: {
-    color: '#666666',
-    marginTop: 8,
+  tabLabel: {
+    color: colors.secondaryText,
+    ...typography.caption,
   },
-  logoutButton: {
-    backgroundColor: '#0B3B78',
-    borderRadius: 10,
-    marginTop: 24,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-  },
-  logoutText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+  activeTabText: {
+    color: colors.primary,
   },
 });
