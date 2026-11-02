@@ -1,20 +1,23 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import AppIcon from './AppIcon';
 import { colors, radii, spacing, typography } from '../theme';
+import { getAnnouncementDate } from '../utils/announcementDate';
 
-export default function AnnouncementCard({ announcement }) {
+export default function AnnouncementCard({ announcement, onPress }) {
   return (
-    <View style={styles.card}>
+    <Pressable accessibilityRole="button" disabled={!onPress} onPress={onPress} style={styles.card}>
       <View style={styles.icon}>
         <AppIcon color={colors.primary} name="bell" size={18} />
       </View>
       <View style={styles.details}>
         <Text numberOfLines={1} style={styles.title}>{announcement.title}</Text>
         <Text numberOfLines={2} style={styles.message}>{announcement.message}</Text>
-        <Text style={styles.meta}>{announcement.clubName}  •  {announcement.date}</Text>
+        <Text style={styles.meta}>
+          {announcement.clubName || 'General announcement'}  •  {announcement.date || getAnnouncementDate(announcement.createdAt)}
+        </Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 

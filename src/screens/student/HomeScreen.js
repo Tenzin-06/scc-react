@@ -8,7 +8,10 @@ import ClubCard from '../../components/ClubCard';
 import EventCard from '../../components/EventCard';
 import SectionHeader from '../../components/SectionHeader';
 import { useAuth } from '../../contexts/AuthContext';
+import { getClubById } from '../../repositories/clubRepository';
+import { getRecentAnnouncements } from '../../repositories/announcementRepository';
 import { getJoinedClubs } from '../../repositories/membershipRepository';
+import { getAnnouncementDate } from '../../utils/announcementDate';
 import { colors, radii, spacing, typography } from '../../theme';
 
 const samplePopularClubs = [
@@ -45,21 +48,13 @@ const sampleUpcomingEvents = [
   },
 ];
 
-const sampleAnnouncements = [
-  {
-    id: 'announcement-1',
-    title: 'Club Registration Open',
-    message: 'Registration for the new semester is now open.',
-    date: '1 Nov 2026',
-    clubName: 'Student Affairs',
-  },
-];
-
 export default function HomeScreen({ navigation }) {
   const { user, userProfile } = useAuth();
   const [clubSearch, setClubSearch] = useState('');
   const [myClubs, setMyClubs] = useState([]);
   const [myClubsError, setMyClubsError] = useState('');
+  const [announcements, setAnnouncements] = useState([]);
+  const [announcementsError, setAnnouncementsError] = useState('');
   const displayName = userProfile?.fullName || user?.displayName || 'Student';
   const loadMyClubs = useCallback(async () => {
     if (!user?.uid) {
@@ -80,6 +75,29 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     loadMyClubs();
   }, [loadMyClubs]);
+
+  const loadAnnouncements = useCallback(async () => {
+    try {
+      setAnnouncementsError('');
+      const recent = await getRecentAnnouncements(3);
+      const enriched = await Promise.all(recent.map(async (announcement) => {
+        const club = announcement.clubId ? await getClubById(announcement.clubId).catch(() => null) : null;
+        return {
+          ...announcement,
+          clubName: club?.name || 'General announcement',
+          date: getAnnouncementDate(announcement.createdAt),
+        };
+      }));
+      setAnnouncements(enriched);
+    } catch (error) {
+      setAnnouncements([]);
+      setAnnouncementsError(error.message || 'Unable to load announcements.');
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAnnouncements();
+  }, [loadAnnouncements]);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -140,10 +158,14 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         <View style={styles.section}>
-          <SectionHeader title="Recent Announcements" />
-          {sampleAnnouncements.map((announcement) => (
-            <AnnouncementCard announcement={announcement} key={announcement.id} />
-          ))}
+          <SectionHeader onPress={() => navigation.navigate('Announcements')} title="Recent Announcements" />
+          {announcementsError ? <Text style={styles.empty}>{announcementsError}</Text> : announcements.length ? announcements.map((announcement) => (
+            <AnnouncementCard
+              announcement={announcement}
+              key={announcement.id}
+              onPress={() => navigation.navigate('AnnouncementDetails', { announcementId: announcement.id })}
+            />
+          )) : <Text style={styles.empty}>No announcements available at the moment.</Text>}
         </View>
 
         <View style={styles.section}>
