@@ -25,7 +25,7 @@ function ProfileRow({ icon, label, onPress }) {
   );
 }
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }) {
   const { logout, user, userProfile } = useAuth();
   const displayName = userProfile?.fullName || user?.displayName || 'Student';
   const role = userProfile?.role === 'admin' ? 'Administrator' : 'Student';
@@ -64,7 +64,17 @@ export default function ProfileScreen() {
               icon={item.icon}
               key={item.label}
               label={item.label}
-              onPress={() => {}}
+              onPress={() => {
+                const routeByLabel = {
+                  'Edit Profile': 'EditProfile',
+                  'My Clubs': 'MyClubs',
+                  'My Events': 'MyEvents',
+                };
+                const route = routeByLabel[item.label];
+                if (route) {
+                  navigation.navigate(route);
+                }
+              }}
             />
           ))}
           <ProfileRow icon="logout" label="Logout" onPress={logout} />
