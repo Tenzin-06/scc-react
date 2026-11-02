@@ -1,11 +1,15 @@
 import {
+  addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
   limit,
   orderBy,
   query,
+  serverTimestamp,
+  updateDoc,
 } from 'firebase/firestore';
 
 import { db } from '../services/firebase';
@@ -107,5 +111,82 @@ export async function getAnnouncementsByClub(clubId) {
       .filter((announcement) => announcement.clubId === clubId.trim());
   } catch (error) {
     throw createAnnouncementError(getErrorMessage(error, 'read-all'), error?.code);
+  }
+}
+
+function validateAnnouncementData(data = {}) {
+  if (typeof data.title !== 'string' || !data.title.trim()) {
+    throw createAnnouncementError('An announcement title is required.', 'firestore/missing-announcement-title');
+  }
+  if (typeof data.message !== 'string' || !data.message.trim()) {
+    throw createAnnouncementError('Announcement details are required.', 'firestore/missing-announcement-message');
+  }
+  if (typeof data.clubId !== 'string' || !data.clubId.trim()) {
+    throw createAnnouncementError('A club ID is required.', 'firestore/invalid-club-id');
+  }
+}
+
+export async function createAnnouncement(data = {}) {
+  validateAnnouncementData(data);
+  try {
+    const snapshot = await addDoc(announcementsCollection, {
+      title: data.title.trim(),
+      message: data.message.trim(),
+      clubId: data.clubId.trim(),
+      createdBy: data.createdBy?.trim() || null,
+      createdAt: serverTimestamp(),
+    });
+    return {
+      id: snapshot.id,
+      title: data.title.trim(),
+      message: data.message.trim(),
+      clubId: data.clubId.trim(),
+    };
+  } catch (error) {
+    throw createAnnouncementError(getErrorMessage(error, 'create'), error?.code);
+  }
+}
+
+export async function updateAnnouncement(announcementId, data = {}) {
+  validateId(announcementId);
+  const updates = {};
+  if (data.title !== undefined) {
+    if (typeof data.title !== 'string' || !data.title.trim()) {
+      throw createAnnouncementError('An announcement title is required.', 'firestore/missing-announcement-title');
+    }
+    updates.title = data.title.trim();
+  }
+  if (data.message !== undefined) {
+    if (typeof data.message !== 'string' || !data.message.trim()) {
+      throw createAnnouncementError('Announcement details are required.', 'firestore/missing-announcement-message');
+    }
+    updates.message = data.message.trim();
+  }
+  if (!Object.keys(updates).length) {
+    throw createAnnouncementError('No announcement changes were provided.', 'firestore/no-announcement-changes');
+  }
+  try {
+    const ref = doc(db, 'announcements', announcementId.trim());
+    if (!(await getDoc(ref)).exists()) {
+      throw createAnnouncementError('The requested announcement could not be found.', 'firestore/announcement-not-found');
+    }
+    await updateDoc(ref, updates);
+    return { id: announcementId.trim(), ...updates };
+  } catch (error) {
+    throw createAnnouncementError(getErrorMessage(error, 'update'), error?.code);
+  }
+}
+
+export async function deleteAnnouncement(announcementId) {
+  validateId(announcementId);
+  try {
+    const ref = doc(db, 'announcements', announcementId.trim());
+    if (!(await getDoc(ref)).exists()) {
+      throw createAnnouncementError('The requested announcement could not be found.', 'firestore/announcement-not-found');
+    }
+    await deleteDoc(ref);
+    return { id: announcementId.trim(), deleted: true };
+  } catch (error) {
+    throw createAnnouncementError(getErrorMessage(error, 'delete'), error?.code);
   }
 }

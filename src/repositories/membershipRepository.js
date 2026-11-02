@@ -133,6 +133,20 @@ export async function getClubMemberCount(clubId) {
   }
 }
 
+export async function getClubMembers(clubId) {
+  validateId(clubId, 'club ID');
+
+  try {
+    const snapshot = await getDocs(collection(db, 'clubs', clubId.trim(), 'members'));
+    return snapshot.docs.map((member) => ({
+      ...member.data(),
+      id: member.id,
+    }));
+  } catch (error) {
+    throw createMembershipError(getMembershipErrorMessage(error, 'list'), error?.code);
+  }
+}
+
 export async function getJoinedClubs(userId) {
   validateId(userId, 'user ID');
 

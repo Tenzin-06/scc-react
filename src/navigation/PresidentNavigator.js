@@ -1,16 +1,20 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { colors, typography } from '../theme';
-import PlaceholderScreen from './PlaceholderScreen';
+import PresidentDashboardScreen from '../screens/president/PresidentDashboardScreen';
+import ManageClubScreen from '../screens/president/ManageClubScreen';
+import ManageMembersScreen from '../screens/president/ManageMembersScreen';
+import ManageEventsScreen from '../screens/president/ManageEventsScreen';
+import ManageAnnouncementsScreen from '../screens/president/ManageAnnouncementsScreen';
 
 const Stack = createNativeStackNavigator();
 
 const routes = [
-  ['PresidentHome', 'President Home'],
-  ['ManageMembers', 'Manage Members'],
-  ['ManageEvents', 'Manage Events'],
-  ['ManageAnnouncements', 'Manage Announcements'],
-  ['ManageClubInfo', 'Manage Club Info'],
+  ['PresidentHome', PresidentDashboardScreen, 'President Home'],
+  ['ManageMembers', ManageMembersScreen, 'Manage Members'],
+  ['ManageEvents', ManageEventsScreen, 'Manage Events'],
+  ['ManageAnnouncements', ManageAnnouncementsScreen, 'Manage Announcements'],
+  ['ManageClubInfo', ManageClubScreen, 'Manage Club Info'],
 ];
 
 export default function PresidentNavigator() {
@@ -24,9 +28,9 @@ export default function PresidentNavigator() {
         headerStyle: { backgroundColor: colors.surface },
       }}
     >
-      {routes.map(([name, title]) => (
+      {routes.map(([name, component, title]) => (
         <Stack.Screen
-          component={PlaceholderScreen}
+          component={component}
           initialParams={{ title }}
           key={name}
           name={name}
