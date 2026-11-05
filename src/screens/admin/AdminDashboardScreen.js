@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '../../contexts/AuthContext';
+import AppIcon from '../../components/AppIcon';
 import { getAdminDashboardStats } from '../../repositories/adminRepository';
 import { colors, spacing, typography } from '../../theme';
 
@@ -64,7 +65,11 @@ export default function AdminDashboardScreen({ navigation }) {
           ['ManagePresidents', 'Manage Presidents'],
         ].map(([route, label]) => (
           <Pressable key={route} onPress={() => navigation.navigate(route)} style={styles.action}>
+            <View style={styles.actionIcon}>
+              <AppIcon color={colors.secondaryText} name={route === 'ManageUsers' ? 'user' : route === 'ManageClubs' ? 'clubs' : route === 'ManageEvents' ? 'events' : 'settings'} />
+            </View>
             <Text style={styles.actionText}>{label}</Text>
+            <Text style={styles.chevron}>›</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -86,6 +91,8 @@ const styles = StyleSheet.create({
   secondaryButton: { alignItems: 'center', borderColor: colors.primary, borderRadius: 10, borderWidth: 1, marginTop: spacing.lg, padding: spacing.md },
   secondaryText: { color: colors.primary, fontWeight: '600' },
   section: { color: colors.text, marginTop: spacing.xxl, ...typography.sectionHeading },
-  action: { backgroundColor: colors.primary, borderRadius: 10, marginTop: spacing.md, padding: spacing.lg },
-  actionText: { color: colors.white, fontWeight: '600', textAlign: 'center' },
+  action: { alignItems: 'center', backgroundColor: colors.surface, borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: 'row', minHeight: 52, paddingHorizontal: spacing.md },
+  actionIcon: { alignItems: 'center', width: 28 },
+  actionText: { color: colors.text, flex: 1, marginLeft: spacing.sm, ...typography.secondary },
+  chevron: { color: '#B8BEC6', fontSize: 25, fontWeight: '300' },
 });

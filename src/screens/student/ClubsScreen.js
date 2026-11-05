@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   StyleSheet,
@@ -12,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppIcon from '../../components/AppIcon';
 import ClubCard from '../../components/ClubCard';
+import { useAuth } from '../../contexts/AuthContext';
+import { addBookmark, getUserBookmarks, removeBookmark } from '../../repositories/bookmarkRepository';
 import { getAllClubs } from '../../repositories/clubRepository';
 import { colors, radii, spacing, typography } from '../../theme';
 
@@ -30,11 +34,14 @@ function EmptyState({ onRetry, title, description }) {
 }
 
 export default function ClubsScreen({ navigation }) {
+  const { user } = useAuth();
   const [clubs, setClubs] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
+  const [bookmarkLoadingId, setBookmarkLoadingId] = useState(null);
 
   const loadClubs = useCallback(async () => {
     setLoading(true);
@@ -46,11 +53,34 @@ export default function ClubsScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  }, []);
 
-  useEffect(() => {
-    loadClubs();
-  }, [loadClubs]);
+    try {
+      const bookmarks = await getUserBookmarks(user.uid);
+      setBookmarkedIds(new Set(bookmarks.filter((bookmark) => bookmark.itemType === 'club').map((bookmark) => bookmark.itemId)));
+    } catch (bookmarkError) {
+      Alert.alert('Bookmark status unavailable', bookmarkError.message || 'Please try again.');
+    }
+  }, [user?.uid]);
+
+  async function toggleBookmark(clubId) {
+    if (bookmarkLoadingId) return;
+    setBookmarkLoadingId(clubId);
+    try {
+      if (bookmarkedIds.has(clubId)) {
+        await removeBookmark(user.uid, clubId, 'club');
+        setBookmarkedIds((current) => { const next = new Set(current); next.delete(clubId); return next; });
+      } else {
+        await addBookmark(user.uid, clubId, 'club');
+        setBookmarkedIds((current) => new Set(current).add(clubId));
+      }
+    } catch (bookmarkError) {
+      Alert.alert('Bookmark could not be updated', bookmarkError.message || 'Please try again.');
+    } finally {
+      setBookmarkLoadingId(null);
+    }
+  }
+
+  useFocusEffect(useCallback(() => { loadClubs(); }, [loadClubs]));
 
   const categories = useMemo(() => {
     const values = clubs
@@ -173,6 +203,10 @@ export default function ClubsScreen({ navigation }) {
         renderItem={({ item: club }) => (
           <ClubCard
             club={club}
+            bookmarked={bookmarkedIds.has(club.id)}
+            bookmarkLoading={bookmarkLoadingId === club.id}
+            compact
+            onBookmark={() => toggleBookmark(club.id)}
             onPress={() => navigation.navigate('ClubDetails', { clubId: club.id })}
           />
         )}

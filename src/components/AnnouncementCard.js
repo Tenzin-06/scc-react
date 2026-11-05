@@ -4,7 +4,7 @@ import AppIcon from './AppIcon';
 import { colors, radii, spacing, typography } from '../theme';
 import { getAnnouncementDate } from '../utils/announcementDate';
 
-export default function AnnouncementCard({ announcement, onPress }) {
+export default function AnnouncementCard({ announcement, onMenu, onPress }) {
   return (
     <Pressable accessibilityRole="button" disabled={!onPress} onPress={onPress} style={styles.card}>
       <View style={styles.icon}>
@@ -17,6 +17,7 @@ export default function AnnouncementCard({ announcement, onPress }) {
           {announcement.clubName || 'General announcement'}  •  {announcement.date || getAnnouncementDate(announcement.createdAt)}
         </Text>
       </View>
+      {onMenu ? <Pressable accessibilityLabel={`Actions for ${announcement.title}`} onPress={(pressEvent) => { pressEvent.stopPropagation(); onMenu(); }} style={styles.menuButton}><AppIcon color={colors.text} name="menu" size={18} /></Pressable> : null}
     </Pressable>
   );
 }
@@ -57,4 +58,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     ...typography.caption,
   },
+  menuButton: { alignItems: 'center', backgroundColor: colors.surface, borderRadius: 16, elevation: 2, height: 32, justifyContent: 'center', width: 32 },
 });

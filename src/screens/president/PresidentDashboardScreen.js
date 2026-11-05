@@ -66,8 +66,8 @@ export default function PresidentDashboardScreen({ navigation }) {
         {[
           ['ManageClub', 'Manage Club'],
           ['ManageMembers', 'Manage Members'],
-          ['ManageEvents', 'Manage Events'],
-          ['ManageAnnouncements', 'Manage Announcements'],
+          ['PresidentEvents', 'Manage Events'],
+          ['PresidentAnnouncements', 'Manage Announcements'],
         ].map(([route, label]) => (
           <Pressable key={route} onPress={() => navigation.navigate(route)} style={styles.action}>
             <Text style={styles.actionText}>{label}</Text>

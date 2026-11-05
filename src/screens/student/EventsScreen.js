@@ -1,17 +1,23 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import EventCard from '../../components/EventCard';
+import { useAuth } from '../../contexts/AuthContext';
+import { addBookmark, getUserBookmarks, removeBookmark } from '../../repositories/bookmarkRepository';
 import { getAllEvents } from '../../repositories/eventRepository';
 import { getClubById } from '../../repositories/clubRepository';
 import { colors, spacing, typography } from '../../theme';
 import { isUpcomingEvent, sortEventsByDate } from '../../utils/eventDate';
 
 export default function EventsScreen({ navigation }) {
+  const { user } = useAuth();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
+  const [bookmarkLoadingId, setBookmarkLoadingId] = useState(null);
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
@@ -30,11 +36,36 @@ export default function EventsScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  }, []);
 
-  useEffect(() => {
+    try {
+      const bookmarks = await getUserBookmarks(user.uid);
+      setBookmarkedIds(new Set(bookmarks.filter((bookmark) => bookmark.itemType === 'event').map((bookmark) => bookmark.itemId)));
+    } catch (bookmarkError) {
+      Alert.alert('Bookmark status unavailable', bookmarkError.message || 'Please try again.');
+    }
+  }, [user?.uid]);
+
+  async function toggleBookmark(eventId) {
+    if (bookmarkLoadingId) return;
+    setBookmarkLoadingId(eventId);
+    try {
+      if (bookmarkedIds.has(eventId)) {
+        await removeBookmark(user.uid, eventId, 'event');
+        setBookmarkedIds((current) => { const next = new Set(current); next.delete(eventId); return next; });
+      } else {
+        await addBookmark(user.uid, eventId, 'event');
+        setBookmarkedIds((current) => new Set(current).add(eventId));
+      }
+    } catch (bookmarkError) {
+      Alert.alert('Bookmark could not be updated', bookmarkError.message || 'Please try again.');
+    } finally {
+      setBookmarkLoadingId(null);
+    }
+  }
+
+  useFocusEffect(useCallback(() => {
     loadEvents();
-  }, [loadEvents]);
+  }, [loadEvents]));
 
   if (loading) {
     return <SafeAreaView style={styles.centered}><ActivityIndicator color={colors.primary} size="large" /></SafeAreaView>;
@@ -64,7 +95,7 @@ export default function EventsScreen({ navigation }) {
         }
         ListHeaderComponent={<Text style={styles.heading}>Upcoming Events</Text>}
         renderItem={({ item }) => (
-          <EventCard event={item} onPress={() => navigation.navigate('EventDetails', { eventId: item.id })} />
+          <EventCard event={item} bookmarked={bookmarkedIds.has(item.id)} bookmarkLoading={bookmarkLoadingId === item.id} onBookmark={() => toggleBookmark(item.id)} onPress={() => navigation.navigate('EventDetails', { eventId: item.id })} />
         )}
         showsVerticalScrollIndicator={false}
       />

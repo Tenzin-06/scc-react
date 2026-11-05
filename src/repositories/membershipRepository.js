@@ -3,7 +3,6 @@ import {
   collectionGroup,
   deleteDoc,
   doc,
-  getCountFromServer,
   getDoc,
   getDocs,
   query,
@@ -62,14 +61,16 @@ export async function joinClub(clubId, userId) {
   validateId(userId, 'user ID');
 
   try {
-    const club = await getClubById(clubId);
-    if (!club) {
-      throw createMembershipError('The requested club could not be found.', 'firestore/club-not-found');
-    }
-
     const ref = membershipRef(clubId, userId);
+    const clubRef = doc(db, 'clubs', clubId.trim());
     await runTransaction(db, async (transaction) => {
-      const membership = await transaction.get(ref);
+      const [membership, club] = await Promise.all([
+        transaction.get(ref),
+        transaction.get(clubRef),
+      ]);
+      if (!club.exists()) {
+        throw createMembershipError('The requested club could not be found.', 'firestore/club-not-found');
+      }
       if (membership.exists()) {
         throw createMembershipError('You are already a member of this club.', 'firestore/membership-exists');
       }
@@ -78,6 +79,9 @@ export async function joinClub(clubId, userId) {
         userId: userId.trim(),
         joinedAt: serverTimestamp(),
         role: 'member',
+      });
+      transaction.update(clubRef, {
+        memberCount: (Number(club.data().memberCount) || 0) + 1,
       });
     });
 
@@ -93,13 +97,23 @@ export async function leaveClub(clubId, userId) {
 
   try {
     const ref = membershipRef(clubId, userId);
+    const clubRef = doc(db, 'clubs', clubId.trim());
     await runTransaction(db, async (transaction) => {
-      const membership = await transaction.get(ref);
+      const [membership, club] = await Promise.all([
+        transaction.get(ref),
+        transaction.get(clubRef),
+      ]);
       if (!membership.exists()) {
         throw createMembershipError('You are not a member of this club.', 'firestore/membership-not-found');
       }
+      if (!club.exists()) {
+        throw createMembershipError('The requested club could not be found.', 'firestore/club-not-found');
+      }
 
       transaction.delete(ref);
+      transaction.update(clubRef, {
+        memberCount: Math.max(0, (Number(club.data().memberCount) || 0) - 1),
+      });
     });
 
     return { clubId: clubId.trim(), userId: userId.trim(), joined: false };
@@ -124,10 +138,8 @@ export async function getClubMemberCount(clubId) {
   validateId(clubId, 'club ID');
 
   try {
-    const countSnapshot = await getCountFromServer(
-      collection(db, 'clubs', clubId.trim(), 'members'),
-    );
-    return countSnapshot.data().count;
+    const club = await getClubById(clubId);
+    return Number(club?.memberCount) || 0;
   } catch (error) {
     throw createMembershipError(getMembershipErrorMessage(error, 'check'), error?.code);
   }

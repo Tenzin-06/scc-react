@@ -2,9 +2,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 
 import { useAuth } from '../contexts/AuthContext';
 import { colors, spacing, typography } from '../theme';
-import AdminNavigator from './AdminNavigator';
 import AuthNavigator from './AuthNavigator';
-import PresidentNavigator from './PresidentNavigator';
 import StudentNavigator from './StudentNavigator';
 
 function LoadingScreen() {
@@ -81,10 +79,8 @@ export default function RootNavigator() {
 
   switch (role) {
     case 'president':
-      return <PresidentNavigator />;
-    case 'admin':
-      return <AdminNavigator />;
     case 'student':
+    case 'admin':
       return <StudentNavigator />;
     default:
       return <AccessDeniedScreen onLogout={logout} onRetry={refreshUserProfile} />;

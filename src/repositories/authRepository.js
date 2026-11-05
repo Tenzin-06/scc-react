@@ -99,6 +99,44 @@ export async function registerUser(userData) {
 
     return credential.user;
   } catch (error) {
+    if (error?.code === 'auth/email-already-in-use') {
+      try {
+        const existingCredential = await signInWithEmailAndPassword(
+          auth,
+          email.trim(),
+          password,
+        );
+        await createUserProfile(existingCredential.user.uid, userData);
+        await updateProfile(existingCredential.user, { displayName: fullName.trim() });
+        return existingCredential.user;
+      } catch (recoveryError) {
+        try {
+          await signOut(auth);
+        } catch {
+          // Preserve the original registration/recovery error.
+        }
+
+        if (recoveryError?.code === 'firestore/profile-exists') {
+          throw createAuthError(
+            'An account with this email already exists. Please log in instead.',
+            'auth/email-already-in-use',
+          );
+        }
+
+        if (recoveryError?.code?.startsWith('auth/')) {
+          throw createAuthError(
+            getAuthErrorMessage(recoveryError, 'register'),
+            recoveryError.code,
+          );
+        }
+
+        throw createAuthError(
+          'Your account exists, but its student profile could not be restored. Please try again.',
+          'firestore/profile-creation-failed',
+        );
+      }
+    }
+
     if (credential?.user) {
       try {
         await signOut(auth);

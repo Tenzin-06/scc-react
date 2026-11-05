@@ -1,0 +1,388 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function hasValidRole() {
+      return signedIn()
+        && exists(userPath(request.auth.uid))
+        && get(userPath(request.auth.uid)).data.get('role', null)
+          in ['student', 'president', 'admin'];
+    }
+
+    function hasRole(role) {
+      return hasValidRole()
+        && get(userPath(request.auth.uid)).data.role == role;
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    // Both stored assignment references must agree. A stale club or profile
+    // assignment cannot grant president access by itself.
+    function isPresidentOfClub(clubId) {
+      return hasRole('president')
+        && get(userPath(request.auth.uid)).data.get('presidentOf', null) == clubId
+        && exists(/databases/$(database)/documents/clubs/$(clubId))
+        && get(/databases/$(database)/documents/clubs/$(clubId))
+          .data.get('presidentId', null) == request.auth.uid;
+    }
+
+    function ownMembershipPath(clubId) {
+      return /databases/$(database)/documents/clubs/$(clubId)/members/$(request.auth.uid);
+    }
+
+    function selfJoinCountUpdate(clubId) {
+      return hasValidRole()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount'])
+        && request.resource.data.memberCount == resource.data.memberCount + 1
+        && !exists(ownMembershipPath(clubId))
+        && existsAfter(ownMembershipPath(clubId))
+        && getAfter(ownMembershipPath(clubId)).data.get('userId', null) == request.auth.uid
+        && getAfter(ownMembershipPath(clubId)).data.get('role', null) == 'member'
+        && getAfter(ownMembershipPath(clubId)).data.get('joinedAt', null) == request.time;
+    }
+
+    function selfLeaveCountUpdate(clubId) {
+      return hasValidRole()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount'])
+        && resource.data.memberCount > 0
+        && request.resource.data.memberCount == resource.data.memberCount - 1
+        && exists(ownMembershipPath(clubId))
+        && get(ownMembershipPath(clubId)).data.get('userId', null) == request.auth.uid
+        && !existsAfter(ownMembershipPath(clubId));
+    }
+
+    function validProfile(data, uid) {
+      return data.keys().hasOnly([
+          'uid', 'fullName', 'studentId', 'email', 'programme', 'department',
+          'semester', 'phone', 'role', 'presidentOf', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasAll([
+          'uid', 'fullName', 'studentId', 'email', 'programme', 'department',
+          'semester', 'phone', 'role', 'createdAt', 'updatedAt'
+        ])
+        && data.uid == uid
+        && data.fullName is string
+        && data.studentId is string
+        && data.email is string
+        && data.programme is string
+        && data.department is string
+        && data.semester is string
+        && data.phone is string
+        && data.role in ['student', 'president', 'admin']
+        && (
+          !('presidentOf' in data)
+          || data.presidentOf == null
+          || data.presidentOf is string
+        )
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function validClub(data) {
+      return data.keys().hasOnly([
+          'name', 'description', 'category', 'presidentId', 'imageUrl',
+          'memberCount', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasAll([
+          'name', 'description', 'category', 'presidentId', 'imageUrl',
+          'memberCount', 'createdAt'
+        ])
+        && data.name is string
+        && data.name.size() > 0
+        && data.description is string
+        && data.category is string
+        && (data.presidentId == null || data.presidentId is string)
+        && data.imageUrl is string
+        && data.memberCount is int
+        && data.memberCount >= 0
+        && data.createdAt is timestamp
+        && (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function validEvent(data) {
+      return data.keys().hasOnly([
+          'title', 'description', 'date', 'time', 'location', 'clubId',
+          'imageUrl', 'createdAt'
+        ])
+        && data.keys().hasAll([
+          'title', 'description', 'date', 'time', 'location', 'clubId',
+          'imageUrl', 'createdAt'
+        ])
+        && data.title is string
+        && data.title.size() > 0
+        && data.description is string
+        && data.date is string
+        && data.time is string
+        && data.location is string
+        && data.clubId is string
+        && data.clubId.size() > 0
+        && data.imageUrl is string
+        && data.createdAt is timestamp;
+    }
+
+    function validAnnouncement(data) {
+      return data.keys().hasOnly([
+          'title', 'message', 'clubId', 'createdBy', 'createdAt'
+        ])
+        && data.keys().hasAll([
+          'title', 'message', 'clubId', 'createdBy', 'createdAt'
+        ])
+        && data.title is string
+        && data.title.size() > 0
+        && data.message is string
+        && data.message.size() > 0
+        && data.clubId is string
+        && data.clubId.size() > 0
+        && data.createdBy == request.auth.uid
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{userId} {
+      // The owner must be able to check for a profile before signup creates it.
+      allow get: if (signedIn() && request.auth.uid == userId) || isAdmin();
+      allow list: if isAdmin();
+
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && validProfile(request.resource.data, userId)
+        && request.resource.data.role == 'student'
+        && !('presidentOf' in request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      // Ordinary clients, including admins, cannot change roles or assignments.
+      // These fields require a trusted Admin SDK workflow, which bypasses rules.
+      allow update: if signedIn()
+        && validProfile(request.resource.data, userId)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.get('presidentOf', null)
+          == resource.data.get('presidentOf', null)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'fullName', 'studentId', 'email', 'programme', 'department',
+          'semester', 'phone', 'updatedAt'
+        ])
+        && request.resource.data.updatedAt == request.time
+        && (request.auth.uid == userId || isAdmin());
+
+      allow delete: if isAdmin();
+    }
+
+    match /clubs/{clubId} {
+      allow get, list: if hasValidRole();
+
+      allow create: if isAdmin()
+        && validClub(request.resource.data)
+        && !('updatedAt' in request.resource.data)
+        && request.resource.data.memberCount == 0
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if isAdmin()
+        && validClub(request.resource.data)
+        && request.resource.data.memberCount == resource.data.memberCount
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if isPresidentOfClub(clubId)
+        && validClub(request.resource.data)
+        && request.resource.data.presidentId == resource.data.presidentId
+        && request.resource.data.memberCount == resource.data.memberCount
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'description', 'category', 'imageUrl', 'updatedAt'
+        ])
+        && request.resource.data.updatedAt == request.time;
+
+      // Keep the public count synchronized with the owner's membership
+      // create/delete in the same transaction.
+      allow update: if selfJoinCountUpdate(clubId)
+        || selfLeaveCountUpdate(clubId);
+
+      allow delete: if isAdmin();
+
+      match /members/{userId} {
+        allow get: if hasValidRole()
+          && (
+            request.auth.uid == userId
+            || isAdmin()
+            || isPresidentOfClub(clubId)
+          );
+
+        allow list: if isAdmin() || isPresidentOfClub(clubId);
+
+        allow create: if hasValidRole()
+          && request.resource.data.keys().hasOnly(['userId', 'joinedAt', 'role'])
+          && request.resource.data.keys().hasAll(['userId', 'joinedAt', 'role'])
+          && request.resource.data.userId == userId
+          && request.resource.data.role == 'member'
+          && request.resource.data.joinedAt == request.time
+          && exists(/databases/$(database)/documents/clubs/$(clubId))
+          && request.auth.uid == userId
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId))
+            .data.memberCount
+            == get(/databases/$(database)/documents/clubs/$(clubId))
+              .data.memberCount + 1;
+
+        allow update: if false;
+        allow delete: if hasValidRole()
+          && request.auth.uid == userId
+          && exists(/databases/$(database)/documents/clubs/$(clubId))
+          && getAfter(/databases/$(database)/documents/clubs/$(clubId))
+            .data.memberCount
+            == get(/databases/$(database)/documents/clubs/$(clubId))
+              .data.memberCount - 1;
+      }
+    }
+
+    // Collection-group query used by getJoinedClubs() and admin statistics.
+    match /{path=**}/members/{userId} {
+      allow get: if hasValidRole()
+        && (request.auth.uid == userId || isAdmin());
+      allow list: if hasValidRole()
+        && (isAdmin() || resource.data.userId == request.auth.uid);
+    }
+
+    match /events/{eventId} {
+      allow get, list: if hasValidRole();
+
+      allow create: if isAdmin()
+        && validEvent(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && exists(/databases/$(database)/documents/clubs/$(request.resource.data.clubId));
+
+      allow create: if isPresidentOfClub(request.resource.data.clubId)
+        && validEvent(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if isAdmin()
+        && validEvent(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && exists(/databases/$(database)/documents/clubs/$(request.resource.data.clubId));
+
+      allow update: if isPresidentOfClub(resource.data.clubId)
+        && validEvent(request.resource.data)
+        && request.resource.data.clubId == resource.data.clubId
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      allow delete: if isAdmin()
+        || isPresidentOfClub(resource.data.clubId);
+    }
+
+    match /eventRegistrations/{registrationId} {
+      // Allow a caller to check their deterministic ID before registration
+      // exists, while never returning another user's existing registration.
+      allow get: if hasValidRole()
+        && (
+          resource == null
+          || resource.data.userId == request.auth.uid
+          || isAdmin()
+        );
+      allow list: if hasValidRole()
+        && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if hasValidRole()
+        && request.resource.data.keys().hasOnly(['userId', 'eventId', 'registeredAt'])
+        && request.resource.data.keys().hasAll(['userId', 'eventId', 'registeredAt'])
+        && request.resource.data.userId is string
+        && request.resource.data.eventId is string
+        && request.resource.data.eventId.size() > 0
+        && request.resource.data.registeredAt == request.time
+        && registrationId == request.resource.data.userId
+          + '_' + request.resource.data.eventId
+        && exists(/databases/$(database)/documents/users/$(request.resource.data.userId))
+        && exists(/databases/$(database)/documents/events/$(request.resource.data.eventId))
+        && (
+          request.resource.data.userId == request.auth.uid
+          || isAdmin()
+        );
+
+      allow update: if false;
+      allow delete: if hasValidRole()
+        && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /announcements/{announcementId} {
+      allow get, list: if hasValidRole();
+
+      allow create: if isAdmin()
+        && validAnnouncement(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && exists(/databases/$(database)/documents/clubs/$(request.resource.data.clubId));
+
+      allow create: if isPresidentOfClub(request.resource.data.clubId)
+        && validAnnouncement(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if isAdmin()
+        && validAnnouncement(request.resource.data)
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && exists(/databases/$(database)/documents/clubs/$(request.resource.data.clubId));
+
+      allow update: if isPresidentOfClub(resource.data.clubId)
+        && validAnnouncement(request.resource.data)
+        && request.resource.data.clubId == resource.data.clubId
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'message'
+        ]);
+
+      allow delete: if isAdmin()
+        || isPresidentOfClub(resource.data.clubId);
+    }
+
+    match /bookmarks/{bookmarkId} {
+      // The client checks deterministic document IDs before creating bookmarks.
+      allow get: if hasValidRole()
+        && (
+          resource == null
+          || resource.data.userId == request.auth.uid
+        );
+      allow list: if hasValidRole()
+        && resource.data.userId == request.auth.uid;
+
+      allow create: if hasValidRole()
+        && request.resource.data.keys().hasOnly([
+          'userId', 'itemId', 'itemType', 'createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'userId', 'itemId', 'itemType', 'createdAt'
+        ])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.itemId is string
+        && request.resource.data.itemId.size() > 0
+        && !request.resource.data.itemId.matches('.*[/].*')
+        && request.resource.data.itemType in ['club', 'event']
+        && request.resource.data.createdAt == request.time
+        && bookmarkId == request.auth.uid
+          + '_' + request.resource.data.itemType
+          + '_' + request.resource.data.itemId
+        && (
+          (
+            request.resource.data.itemType == 'club'
+            && exists(/databases/$(database)/documents/clubs/$(request.resource.data.itemId))
+          )
+          || (
+            request.resource.data.itemType == 'event'
+            && exists(/databases/$(database)/documents/events/$(request.resource.data.itemId))
+          )
+        );
+
+      allow update: if false;
+      allow delete: if hasValidRole()
+        && resource.data.userId == request.auth.uid;
+    }
+  }
+}

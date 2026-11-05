@@ -21,8 +21,25 @@ function parseTime(time) {
 export function parseEventDate(date, time) {
   if (!date) return null;
 
-  const parsed = new Date(date);
-  if (Number.isNaN(parsed.getTime())) return null;
+  let parsed;
+  if (date instanceof Date) {
+    parsed = new Date(date);
+  } else if (typeof date === 'string') {
+    const match = date.trim().match(/^(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})$/);
+    if (match) {
+      const month = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+        .indexOf(match[2].slice(0, 3).toLowerCase());
+      parsed = month >= 0 ? new Date(Number(match[3]), month, Number(match[1])) : null;
+    } else {
+      const numericMatch = date.trim().match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+      parsed = numericMatch
+        ? new Date(Number(numericMatch[3]), Number(numericMatch[2]) - 1, Number(numericMatch[1]))
+        : new Date(date);
+    }
+  } else {
+    parsed = new Date(date);
+  }
+  if (!parsed || Number.isNaN(parsed.getTime())) return null;
 
   const parsedTime = parseTime(time);
   if (!parsedTime) return null;

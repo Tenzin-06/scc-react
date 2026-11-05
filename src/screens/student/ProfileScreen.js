@@ -11,6 +11,7 @@ const menuItems = [
   { icon: 'edit', label: 'Edit Profile' },
   { icon: 'clubs', label: 'My Clubs' },
   { icon: 'events', label: 'My Events' },
+  { icon: 'clubs', label: 'Bookmarks' },
   { icon: 'bell', label: 'Notifications' },
   { icon: 'settings', label: 'Settings' },
 ];
@@ -31,7 +32,17 @@ export default function ProfileScreen({ navigation }) {
   const { logout, user, userProfile } = useAuth();
   const [registeredEventCount, setRegisteredEventCount] = useState(null);
   const displayName = userProfile?.fullName || user?.displayName || 'Student';
-  const role = userProfile?.role === 'admin' ? 'Administrator' : 'Student';
+  const normalizedRole = userProfile?.role?.trim().toLowerCase();
+  const role = normalizedRole === 'admin'
+    ? 'Administrator'
+    : normalizedRole === 'president'
+      ? 'Club President'
+      : 'Student';
+  const dashboardItem = normalizedRole === 'admin'
+    ? { icon: 'settings', label: 'Admin Dashboard', route: 'AdminDashboard' }
+    : normalizedRole === 'president'
+      ? { icon: 'clubs', label: 'President Dashboard', route: 'PresidentDashboard' }
+      : null;
 
   useEffect(() => {
     let active = true;
@@ -63,7 +74,7 @@ export default function ProfileScreen({ navigation }) {
 
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
-            <AppIcon color={colors.secondaryText} name="user" size={27} />
+            <AppIcon color={colors.secondaryText} name="user" size={42} />
           </View>
           <Text style={styles.name}>{displayName}</Text>
           <Text style={styles.role}>{role}</Text>
@@ -81,7 +92,23 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
 
+        <View style={styles.detailsCard}>
+          <ProfileDetail label="Email" value={userProfile?.email || user?.email} />
+          <ProfileDetail label="Student ID" value={userProfile?.studentId} />
+          <ProfileDetail label="Programme" value={userProfile?.programme} />
+          <ProfileDetail label="Department" value={userProfile?.department} />
+          <ProfileDetail label="Semester" value={userProfile?.semester} />
+          <ProfileDetail label="Phone" value={userProfile?.phone} />
+        </View>
+
         <View style={styles.menuCard}>
+          {dashboardItem ? (
+            <ProfileRow
+              icon={dashboardItem.icon}
+              label={dashboardItem.label}
+              onPress={() => navigation.navigate(dashboardItem.route)}
+            />
+          ) : null}
           {menuItems.map((item) => (
             <ProfileRow
               icon={item.icon}
@@ -92,6 +119,7 @@ export default function ProfileScreen({ navigation }) {
                   'Edit Profile': 'EditProfile',
                   'My Clubs': 'MyClubs',
                   'My Events': 'MyEvents',
+                  Bookmarks: 'Bookmarks',
                 };
                 const route = routeByLabel[item.label];
                 if (route) {
@@ -104,6 +132,15 @@ export default function ProfileScreen({ navigation }) {
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function ProfileDetail({ label, value }) {
+  return (
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value || 'Not provided'}</Text>
+    </View>
   );
 }
 
@@ -142,11 +179,11 @@ const styles = StyleSheet.create({
   avatar: {
     alignItems: 'center',
     backgroundColor: '#E8EBEF',
-    borderRadius: 40,
-    height: 56,
+    borderRadius: 56,
+    height: 96,
     justifyContent: 'center',
     marginBottom: spacing.sm,
-    width: 56,
+    width: 96,
   },
   avatarIcon: {
     color: colors.secondaryText,
@@ -173,6 +210,34 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     minHeight: 50,
     paddingVertical: spacing.sm,
+  },
+  detailsCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    marginBottom: spacing.md,
+    marginHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
+  },
+  detailRow: {
+    alignItems: 'center',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+  },
+  detailLabel: {
+    color: colors.secondaryText,
+    flex: 1,
+    ...typography.caption,
+  },
+  detailValue: {
+    color: colors.text,
+    flex: 1,
+    textAlign: 'right',
+    ...typography.secondary,
   },
   stat: {
     alignItems: 'center',

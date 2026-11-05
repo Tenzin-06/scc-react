@@ -86,6 +86,25 @@ export default function AppIcon({ color = '#666666', name, size = 20 }) {
     );
   }
 
+  if (name === 'add') {
+    return (
+      <View style={[styles.icon, iconStyle]}>
+        <View style={[styles.addHorizontal, { backgroundColor: color }]} />
+        <View style={[styles.addVertical, { backgroundColor: color }]} />
+      </View>
+    );
+  }
+
+  if (name === 'menu') {
+    return (
+      <View style={[styles.icon, iconStyle]}>
+        <View style={[styles.menuDot, { backgroundColor: color }]} />
+        <View style={[styles.menuDot, { backgroundColor: color }]} />
+        <View style={[styles.menuDot, { backgroundColor: color }]} />
+      </View>
+    );
+  }
+
   return <View style={[styles.icon, iconStyle]} />;
 }
 
@@ -245,5 +264,21 @@ const styles = StyleSheet.create({
     top: '73%',
     transform: [{ rotate: '45deg' }],
     width: '36%',
+  },
+  addHorizontal: {
+    height: 2,
+    position: 'absolute',
+    width: '72%',
+  },
+  addVertical: {
+    height: '72%',
+    position: 'absolute',
+    width: 2,
+  },
+  menuDot: {
+    borderRadius: 99,
+    height: 3,
+    marginVertical: 1.5,
+    width: 3,
   },
 });

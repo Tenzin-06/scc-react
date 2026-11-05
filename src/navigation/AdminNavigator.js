@@ -7,6 +7,9 @@ import ManageClubsScreen from '../screens/admin/ManageClubsScreen';
 import ManageEventsScreen from '../screens/admin/ManageEventsScreen';
 import ManagePresidentsScreen from '../screens/admin/ManagePresidentsScreen';
 import ManageUsersScreen from '../screens/admin/ManageUsersScreen';
+import AddClubScreen from '../screens/admin/AddClubScreen';
+import AddEventScreen from '../screens/admin/AddEventScreen';
+import AddAnnouncementScreen from '../screens/admin/AddAnnouncementScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -17,6 +20,12 @@ const routes = [
   ['ManageEvents', 'Manage Events', ManageEventsScreen],
   ['ManageAnnouncements', 'Manage Announcements', ManageAnnouncementsScreen],
   ['ManagePresidents', 'Manage Presidents', ManagePresidentsScreen],
+  ['AddClub', 'Add Club', AddClubScreen],
+  ['EditClub', 'Edit Club', AddClubScreen],
+  ['AddEvent', 'Add Event', AddEventScreen],
+  ['EditEvent', 'Edit Event', AddEventScreen],
+  ['AddAnnouncement', 'Add Announcement', AddAnnouncementScreen],
+  ['EditAnnouncement', 'Edit Announcement', AddAnnouncementScreen],
 ];
 
 export default function AdminNavigator() {

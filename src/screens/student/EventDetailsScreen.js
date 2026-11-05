@@ -3,7 +3,9 @@ import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Tex
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppIcon from '../../components/AppIcon';
+import BookmarkButton from '../../components/BookmarkButton';
 import { useAuth } from '../../contexts/AuthContext';
+import useBookmark from '../../hooks/useBookmark';
 import { getClubById } from '../../repositories/clubRepository';
 import { getEventById } from '../../repositories/eventRepository';
 import {
@@ -16,6 +18,7 @@ import { colors, radii, spacing, typography } from '../../theme';
 export default function EventDetailsScreen({ navigation, route }) {
   const { user } = useAuth();
   const eventId = route?.params?.eventId;
+  const bookmark = useBookmark(user?.uid, eventId, 'event');
   const [event, setEvent] = useState(null);
   const [club, setClub] = useState(null);
   const [registered, setRegistered] = useState(false);
@@ -116,6 +119,10 @@ export default function EventDetailsScreen({ navigation, route }) {
           <View style={styles.imagePlaceholder}><AppIcon color={colors.primary} name="events" size={42} /></View>
         )}
         <Text style={styles.title}>{event.title}</Text>
+        <View style={styles.bookmarkRow}>
+          <Text style={styles.bookmarkLabel}>{bookmark.bookmarked ? 'Saved to bookmarks' : 'Save this event'}</Text>
+          <BookmarkButton bookmarked={bookmark.bookmarked} disabled={bookmark.loading} label="event" onPress={bookmark.toggle} />
+        </View>
         <View style={styles.infoCard}>
           <Text style={styles.infoLabel}>Date</Text><Text style={styles.infoValue}>{event.date || 'Date not provided'}</Text>
           <Text style={styles.infoLabel}>Time</Text><Text style={styles.infoValue}>{event.time || 'Time not provided'}</Text>
@@ -140,6 +147,8 @@ const styles = StyleSheet.create({
   image: { borderRadius: radii.card, height: 190, width: '100%' },
   imagePlaceholder: { alignItems: 'center', backgroundColor: '#E8EEF7', borderRadius: radii.card, height: 190, justifyContent: 'center' },
   title: { color: colors.text, marginTop: spacing.lg, textAlign: 'center', ...typography.screenTitle },
+  bookmarkRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md },
+  bookmarkLabel: { color: colors.secondaryText, ...typography.secondary },
   infoCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.card, borderWidth: 1, marginTop: spacing.xl, padding: spacing.lg },
   infoLabel: { color: colors.secondaryText, marginTop: spacing.sm, ...typography.caption },
   infoValue: { color: colors.text, marginTop: spacing.xs, ...typography.body },

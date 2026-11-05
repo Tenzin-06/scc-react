@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -34,9 +35,9 @@ export default function AnnouncementsScreen({ navigation }) {
     }
   }, []);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     loadAnnouncements();
-  }, [loadAnnouncements]);
+  }, [loadAnnouncements]));
 
   if (loading) {
     return <SafeAreaView style={styles.centered}><ActivityIndicator color={colors.primary} size="large" /></SafeAreaView>;

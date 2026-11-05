@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,53 +9,25 @@ import ClubCard from '../../components/ClubCard';
 import EventCard from '../../components/EventCard';
 import SectionHeader from '../../components/SectionHeader';
 import { useAuth } from '../../contexts/AuthContext';
-import { getClubById } from '../../repositories/clubRepository';
+import { getAllClubs, getClubById } from '../../repositories/clubRepository';
 import { getRecentAnnouncements } from '../../repositories/announcementRepository';
+import { getAllEvents } from '../../repositories/eventRepository';
 import { getJoinedClubs } from '../../repositories/membershipRepository';
 import { getAnnouncementDate } from '../../utils/announcementDate';
+import { isUpcomingEvent, sortEventsByDate } from '../../utils/eventDate';
 import { colors, radii, spacing, typography } from '../../theme';
-
-const samplePopularClubs = [
-  {
-    id: 'club-1',
-    name: 'Coding Club',
-    category: 'Technology',
-    description: 'Explore programming and software development.',
-  },
-  {
-    id: 'club-2',
-    name: 'Photography Club',
-    category: 'Arts',
-    description: 'Capture moments and develop photography skills.',
-  },
-];
-
-const sampleUpcomingEvents = [
-  {
-    id: 'event-1',
-    title: 'Web Development Workshop',
-    date: '10 Nov 2026',
-    time: '10:00 AM',
-    location: 'College Auditorium',
-    clubName: 'Coding Club',
-  },
-  {
-    id: 'event-2',
-    title: 'Photography Walk',
-    date: '14 Nov 2026',
-    time: '3:00 PM',
-    location: 'Main Campus',
-    clubName: 'Photography Club',
-  },
-];
 
 export default function HomeScreen({ navigation }) {
   const { user, userProfile } = useAuth();
   const [clubSearch, setClubSearch] = useState('');
+  const [popularClubs, setPopularClubs] = useState([]);
+  const [clubsError, setClubsError] = useState('');
   const [myClubs, setMyClubs] = useState([]);
   const [myClubsError, setMyClubsError] = useState('');
   const [announcements, setAnnouncements] = useState([]);
   const [announcementsError, setAnnouncementsError] = useState('');
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [eventsError, setEventsError] = useState('');
   const displayName = userProfile?.fullName || user?.displayName || 'Student';
   const loadMyClubs = useCallback(async () => {
     if (!user?.uid) {
@@ -72,9 +45,22 @@ export default function HomeScreen({ navigation }) {
     }
   }, [user?.uid]);
 
-  useEffect(() => {
-    loadMyClubs();
-  }, [loadMyClubs]);
+  const loadPopularClubs = useCallback(async () => {
+    try {
+      setClubsError('');
+      const clubs = await getAllClubs();
+      const rankedClubs = [...clubs]
+        .sort((first, second) => {
+          const memberDifference = (Number(second.memberCount) || 0) - (Number(first.memberCount) || 0);
+          return memberDifference || (first.name || '').localeCompare(second.name || '');
+        })
+        .slice(0, 5);
+      setPopularClubs(rankedClubs);
+    } catch (error) {
+      setPopularClubs([]);
+      setClubsError(error.message || 'Unable to load popular clubs.');
+    }
+  }, []);
 
   const loadAnnouncements = useCallback(async () => {
     try {
@@ -95,9 +81,31 @@ export default function HomeScreen({ navigation }) {
     }
   }, []);
 
-  useEffect(() => {
+  const loadUpcomingEvents = useCallback(async () => {
+    try {
+      setEventsError('');
+      const allEvents = await getAllEvents();
+      const upcoming = sortEventsByDate(allEvents.filter((event) => isUpcomingEvent(event)));
+      const enriched = await Promise.all(upcoming.slice(0, 3).map(async (event) => {
+        const club = event.clubId ? await getClubById(event.clubId).catch(() => null) : null;
+        return {
+          ...event,
+          clubName: club?.name || 'Student Club',
+        };
+      }));
+      setUpcomingEvents(enriched);
+    } catch (error) {
+      setUpcomingEvents([]);
+      setEventsError(error.message || 'Unable to load upcoming events.');
+    }
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    loadMyClubs();
+    loadPopularClubs();
     loadAnnouncements();
-  }, [loadAnnouncements]);
+    loadUpcomingEvents();
+  }, [loadMyClubs, loadPopularClubs, loadAnnouncements, loadUpcomingEvents]));
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -108,13 +116,13 @@ export default function HomeScreen({ navigation }) {
   const filteredClubs = useMemo(() => {
     const query = clubSearch.trim().toLowerCase();
     if (!query) {
-      return samplePopularClubs;
+      return popularClubs;
     }
 
-    return samplePopularClubs.filter((club) =>
+    return popularClubs.filter((club) =>
       `${club.name} ${club.category} ${club.description}`.toLowerCase().includes(query),
     );
-  }, [clubSearch]);
+  }, [clubSearch, popularClubs]);
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
@@ -141,20 +149,20 @@ export default function HomeScreen({ navigation }) {
               <ClubCard club={club} key={club.id} onPress={() => navigation.navigate('ClubDetails', { clubId: club.id })} />
             ))}
           </ScrollView>
-          {!filteredClubs.length ? (
-            <Text style={styles.emptySearch}>No clubs match your search.</Text>
+          {clubsError ? <Text style={styles.empty}>{clubsError}</Text> : !filteredClubs.length ? (
+            <Text style={styles.emptySearch}>{clubSearch.trim() ? 'No clubs match your search.' : 'No clubs available at the moment.'}</Text>
           ) : null}
         </View>
 
         <View style={styles.section}>
           <SectionHeader onPress={() => navigation.navigate('Events')} title="Upcoming Events" />
-          {sampleUpcomingEvents.map((event) => (
+          {eventsError ? <Text style={styles.empty}>{eventsError}</Text> : upcomingEvents.length ? upcomingEvents.map((event) => (
             <EventCard
               event={event}
               key={event.id}
               onPress={() => navigation.navigate('EventDetails', { eventId: event.id })}
             />
-          ))}
+          )) : <Text style={styles.empty}>No upcoming events available at the moment.</Text>}
         </View>
 
         <View style={styles.section}>

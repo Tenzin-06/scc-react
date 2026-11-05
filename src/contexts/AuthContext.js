@@ -69,6 +69,12 @@ export function AuthProvider({ children }) {
     }
   }
 
+  async function register(nextUserData) {
+    const registeredUser = await registerUser(nextUserData);
+    await loadUserProfile(registeredUser);
+    return registeredUser;
+  }
+
   const value = useMemo(
     () => {
       const role = typeof userProfile?.role === 'string'
@@ -85,7 +91,7 @@ export function AuthProvider({ children }) {
         profileError,
         isAuthenticated: Boolean(user),
         login: loginUser,
-        register: registerUser,
+        register,
         logout: logoutUser,
         resetPassword,
         refreshUserProfile,

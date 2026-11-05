@@ -12,7 +12,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppIcon from '../../components/AppIcon';
+import BookmarkButton from '../../components/BookmarkButton';
 import { useAuth } from '../../contexts/AuthContext';
+import useBookmark from '../../hooks/useBookmark';
 import { getClubById } from '../../repositories/clubRepository';
 import {
   checkMembership,
@@ -26,6 +28,7 @@ import { colors, radii, spacing, typography } from '../../theme';
 export default function ClubDetailsScreen({ navigation, route }) {
   const { user } = useAuth();
   const clubId = route?.params?.clubId;
+  const bookmark = useBookmark(user?.uid, clubId, 'club');
   const [club, setClub] = useState(null);
   const [president, setPresident] = useState(null);
   const [memberCount, setMemberCount] = useState(0);
@@ -138,6 +141,10 @@ export default function ClubDetailsScreen({ navigation, route }) {
           </View>
         )}
         <Text style={styles.title}>{club.name}</Text>
+        <View style={styles.bookmarkRow}>
+          <Text style={styles.bookmarkLabel}>{bookmark.bookmarked ? 'Saved to bookmarks' : 'Save this club'}</Text>
+          <BookmarkButton bookmarked={bookmark.bookmarked} disabled={bookmark.loading} label="club" onPress={bookmark.toggle} />
+        </View>
         <Text style={styles.category}>{club.category || 'General'}</Text>
         <Text style={styles.description}>{club.description || 'No description available.'}</Text>
 
@@ -191,6 +198,8 @@ const styles = StyleSheet.create({
   },
   title: { color: colors.text, marginTop: spacing.xl, ...typography.screenTitle },
   category: { color: colors.primary, marginTop: spacing.xs, ...typography.secondary },
+  bookmarkRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md },
+  bookmarkLabel: { color: colors.secondaryText, ...typography.secondary },
   description: { color: colors.secondaryText, marginTop: spacing.md, ...typography.body },
   infoCard: {
     backgroundColor: colors.surface,

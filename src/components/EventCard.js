@@ -1,9 +1,10 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import AppIcon from './AppIcon';
+import BookmarkButton from './BookmarkButton';
 import { colors, radii, spacing, typography } from '../theme';
 
-export default function EventCard({ event, onPress }) {
+export default function EventCard({ event, onMenu, onPress, bookmarked, bookmarkLoading, onBookmark }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={styles.card}>
       <View style={styles.dateBox}>
@@ -15,6 +16,8 @@ export default function EventCard({ event, onPress }) {
         <Text style={styles.meta}>{event.time}  •  {event.location}</Text>
         <Text style={styles.club}>{event.clubName}</Text>
       </View>
+      {onMenu ? <Pressable accessibilityLabel={`Actions for ${event.title}`} onPress={(pressEvent) => { pressEvent.stopPropagation(); onMenu(); }} style={styles.menuButton}><AppIcon color={colors.text} name="menu" size={18} /></Pressable> : null}
+      {onBookmark ? <View style={styles.bookmarkButton}><BookmarkButton bookmarked={bookmarked} disabled={bookmarkLoading} label="event" onPress={onBookmark} /></View> : null}
     </Pressable>
   );
 }
@@ -63,4 +66,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     ...typography.caption,
   },
+  menuButton: { alignItems: 'center', backgroundColor: colors.surface, borderRadius: 16, elevation: 2, height: 32, justifyContent: 'center', width: 32 },
+  bookmarkButton: { marginLeft: spacing.sm },
 });
