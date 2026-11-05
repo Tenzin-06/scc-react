@@ -17,7 +17,7 @@ Roles are stored in `users/{uid}.role` and must be `student`, `president`, or
 | Event registrations | Own register/cancel | Own only | Manage |
 | Bookmarks | Own records | Own records | Own records |
 | Read all profiles | No | No | Yes |
-| Update profile fields | Own permitted fields | Own permitted fields | Permitted fields |
+| Update profile fields | Own permitted fields | Own permitted fields | Permitted fields; president assignments only through a consistent atomic club/profile write |
 
 ## Collections and ownership
 
@@ -36,11 +36,13 @@ Roles are stored in `users/{uid}.role` and must be `student`, `president`, or
 
 President access requires all three values to agree: the profile role is
 `president`, `users/{uid}.presidentOf` equals the club ID, and
-`clubs/{clubId}.presidentId` equals the authenticated UID. The app has no trusted
-role or profile-assignment writer. Provision admin roles and set president
-profile assignments through a trusted Admin SDK workflow. Ordinary clients
-cannot change a profile's `role` or `presidentOf`; only admins can set the
-club's `presidentId` through club creation or update.
+`clubs/{clubId}.presidentId` equals the authenticated UID. Admins can assign a
+student to a club through the app's atomic batch: the club reference and the
+student's role/club profile must agree in the batch's after-state. Rules reject
+partial assignments and require the previous president to be demoted in the
+same batch when replaced. Admin role provisioning still requires a trusted
+Admin SDK workflow. Ordinary clients cannot change another user's role or
+president assignment.
 
 ## Limitations to review
 

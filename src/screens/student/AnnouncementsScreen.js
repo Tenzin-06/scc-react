@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AnnouncementCard from '../../components/AnnouncementCard';
 import { getClubById } from '../../repositories/clubRepository';
 import { getAllAnnouncements } from '../../repositories/announcementRepository';
-import { colors, spacing, typography } from '../../theme';
+import { colors, componentStyles, spacing, typography } from '../../theme';
 import { getAnnouncementDate } from '../../utils/announcementDate';
 
 export default function AnnouncementsScreen({ navigation }) {
@@ -48,7 +48,7 @@ export default function AnnouncementsScreen({ navigation }) {
       <SafeAreaView style={styles.centered}>
         <Text style={styles.title}>Unable to load announcements.</Text>
         <Text style={styles.message}>{error}</Text>
-        <Pressable onPress={loadAnnouncements} style={styles.button}><Text style={styles.buttonText}>Retry</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={loadAnnouncements} style={({ pressed }) => [styles.button, pressed && styles.pressed]}><Text style={styles.buttonText}>Retry</Text></Pressable>
       </SafeAreaView>
     );
   }
@@ -74,11 +74,12 @@ export default function AnnouncementsScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
-  content: { padding: spacing.lg },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   centered: { alignItems: 'center', backgroundColor: colors.background, flex: 1, justifyContent: 'center', padding: spacing.xxl },
   empty: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.xxxl },
   title: { color: colors.text, textAlign: 'center', ...typography.sectionHeading },
   message: { color: colors.secondaryText, marginTop: spacing.sm, textAlign: 'center', ...typography.secondary },
-  button: { backgroundColor: colors.primary, borderRadius: 10, marginTop: spacing.xl, paddingHorizontal: spacing.xxl, paddingVertical: spacing.md },
-  buttonText: { color: colors.white, fontWeight: '600' },
+  button: { ...componentStyles.primaryButton, marginTop: spacing.xl },
+  buttonText: { color: colors.white, ...typography.label },
+  pressed: componentStyles.pressed,
 });

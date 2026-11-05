@@ -13,6 +13,7 @@ import {
 
 import { db } from '../services/firebase';
 import { getClubById } from './clubRepository';
+import { getUserProfile } from './userRepository';
 
 function createMembershipError(message, code = 'firestore/membership-unknown') {
   const error = new Error(message);
@@ -63,6 +64,7 @@ export async function joinClub(clubId, userId) {
   try {
     const ref = membershipRef(clubId, userId);
     const clubRef = doc(db, 'clubs', clubId.trim());
+    const profile = await getUserProfile(userId.trim());
     await runTransaction(db, async (transaction) => {
       const [membership, club] = await Promise.all([
         transaction.get(ref),
@@ -79,6 +81,7 @@ export async function joinClub(clubId, userId) {
         userId: userId.trim(),
         joinedAt: serverTimestamp(),
         role: 'member',
+        ...(profile?.fullName ? { displayName: profile.fullName } : {}),
       });
       transaction.update(clubRef, {
         memberCount: (Number(club.data().memberCount) || 0) + 1,

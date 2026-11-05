@@ -27,10 +27,12 @@ export function AuthMessage({ children, type = 'error' }) {
     return null;
   }
 
+  const success = type === 'success';
+
   return (
-    <Text style={type === 'success' ? styles.successMessage : styles.errorMessage}>
-      {children}
-    </Text>
+    <View style={[styles.message, success ? styles.successMessage : styles.errorMessage]}>
+      <Text style={success ? styles.successText : styles.errorText}>{children}</Text>
+    </View>
   );
 }
 
@@ -41,6 +43,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     alignItems: 'center',
+    backgroundColor: colors.primary,
     borderColor: colors.primary,
     borderRadius: radii.md,
     borderWidth: 1,
@@ -50,7 +53,7 @@ const styles = StyleSheet.create({
     width: 48,
   },
   logoText: {
-    color: colors.primary,
+    color: colors.white,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -64,22 +67,35 @@ const styles = StyleSheet.create({
   title: {
     color: colors.text,
     ...typography.screenTitle,
-    textAlign: 'center',
+    textAlign: 'left',
   },
   description: {
     color: colors.secondaryText,
     marginTop: spacing.sm,
-    textAlign: 'center',
+    textAlign: 'left',
     ...typography.secondary,
   },
-  errorMessage: {
-    color: colors.dark,
+  message: {
+    borderLeftWidth: 3,
+    borderRadius: radii.sm,
     marginBottom: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  errorMessage: {
+    backgroundColor: colors.chip,
+    borderLeftColor: colors.dark,
+  },
+  errorText: {
+    color: colors.dark,
     ...typography.secondary,
   },
   successMessage: {
+    backgroundColor: colors.background,
+    borderLeftColor: colors.primary,
+  },
+  successText: {
     color: colors.primary,
-    marginBottom: spacing.lg,
     ...typography.secondary,
   },
 });

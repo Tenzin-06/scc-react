@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '../../contexts/AuthContext';
+import StickyActionBar from '../../components/StickyActionBar';
 import { getClubById, updateClub } from '../../repositories/clubRepository';
-import { colors, spacing, typography } from '../../theme';
+import { colors, componentStyles, spacing, typography } from '../../theme';
 
 export default function ManageClubScreen() {
   const { userProfile } = useAuth();
@@ -39,34 +40,44 @@ export default function ManageClubScreen() {
   if (!clubId || !club) return <SafeAreaView style={styles.centered}><Text style={styles.title}>Assigned club unavailable.</Text><Text style={styles.message}>{message || 'Ask an administrator to assign your club.'}</Text></SafeAreaView>;
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Manage Club</Text>
-        {['name', 'description', 'category', 'imageUrl'].map((field) => (
-          <TextInput
-            key={field}
-            multiline={field === 'description'}
-            onChangeText={(value) => setForm((current) => ({ ...current, [field]: value }))}
-            placeholder={field === 'imageUrl' ? 'Image URL (optional)' : field[0].toUpperCase() + field.slice(1)}
-            placeholderTextColor={colors.secondaryText}
-            style={[styles.input, field === 'description' && styles.multiline]}
-            value={form[field]}
-          />
+      <ScrollView contentContainerStyle={styles.content} style={styles.scroll}>
+        <Text style={styles.title}>Club information</Text>
+        <Text style={styles.subtitle}>Update details students see when they discover your club.</Text>
+        {[
+          ['name', 'Club name'],
+          ['description', 'Description'],
+          ['category', 'Category'],
+          ['imageUrl', 'Image URL (optional)'],
+        ].map(([field, label]) => (
+          <View key={field} style={styles.fieldGroup}>
+            <Text style={styles.label}>{label}</Text>
+            <TextInput
+              accessibilityLabel={label}
+              multiline={field === 'description'}
+              onChangeText={(value) => setForm((current) => ({ ...current, [field]: value }))}
+              placeholder={label}
+              placeholderTextColor={colors.secondaryText}
+              style={[styles.input, field === 'description' && styles.multiline]}
+              value={form[field]}
+            />
+          </View>
         ))}
-        <Text style={styles.message}>{message}</Text>
-        <Pressable disabled={saving} onPress={save} style={styles.button}><Text style={styles.buttonText}>{saving ? 'Saving...' : 'Save Changes'}</Text></Pressable>
       </ScrollView>
+      <StickyActionBar disabled={saving} loading={saving} message={message} onPress={save} title="Update club" />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
-  content: { padding: spacing.lg },
+  scroll: { flex: 1 },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   centered: { alignItems: 'center', backgroundColor: colors.background, flex: 1, justifyContent: 'center', padding: spacing.xxl },
-  title: { color: colors.text, textAlign: 'center', ...typography.screenTitle },
-  input: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 10, borderWidth: 1, color: colors.text, marginTop: spacing.md, padding: spacing.md },
-  multiline: { minHeight: 110, textAlignVertical: 'top' },
+  title: { color: colors.text, ...typography.screenTitle },
+  subtitle: { color: colors.secondaryText, marginTop: spacing.xs, ...typography.secondary },
   message: { color: colors.secondaryText, marginTop: spacing.md, textAlign: 'center', ...typography.secondary },
-  button: { backgroundColor: colors.primary, borderRadius: 10, marginTop: spacing.lg, padding: spacing.md },
-  buttonText: { color: colors.white, fontWeight: '600', textAlign: 'center' },
+  fieldGroup: { marginTop: spacing.lg },
+  label: { color: colors.text, marginBottom: spacing.xs, ...typography.label },
+  input: { ...componentStyles.input, backgroundColor: colors.surface, minHeight: 52 },
+  multiline: { minHeight: 120, textAlignVertical: 'top' },
 });

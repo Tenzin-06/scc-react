@@ -7,7 +7,7 @@ import { AuthSelect } from '../../components/auth/AuthSelect';
 import { createEvent } from '../../repositories/eventRepository';
 import { updateEvent } from '../../repositories/eventRepository';
 import { getAllClubs } from '../../repositories/clubRepository';
-import { colors, spacing, typography } from '../../theme';
+import { colors, componentStyles, spacing, typography } from '../../theme';
 
 const fields = ['title', 'description', 'location', 'imageUrl'];
 
@@ -60,11 +60,11 @@ export default function AddEventScreen({ navigation, route }) {
         {fields.map((field) => (
           <TextInput key={field} multiline={field === 'description'} onChangeText={(value) => setForm((current) => ({ ...current, [field]: value }))} placeholder={field === 'clubId' ? 'Club ID' : field} placeholderTextColor={colors.secondaryText} style={[styles.input, field === 'description' && styles.multiline]} value={form[field]} />
         ))}
-        <Pressable onPress={() => setPicker('date')} style={styles.selector}>
+        <Pressable accessibilityRole="button" onPress={() => setPicker('date')} style={({ pressed }) => [styles.selector, pressed && componentStyles.pressed]}>
           <Text style={form.date ? styles.selectorText : styles.placeholder}>{form.date || 'Select date'}</Text>
           <Text style={styles.selectorIcon}>Calendar</Text>
         </Pressable>
-        <Pressable onPress={() => setPicker('time')} style={styles.selector}>
+        <Pressable accessibilityRole="button" onPress={() => setPicker('time')} style={({ pressed }) => [styles.selector, pressed && componentStyles.pressed]}>
           <Text style={form.time ? styles.selectorText : styles.placeholder}>{form.time || 'Select time'}</Text>
           <Text style={styles.selectorIcon}>Clock</Text>
         </Pressable>
@@ -87,7 +87,7 @@ export default function AddEventScreen({ navigation, route }) {
           />
         ) : null}
         {message ? <Text style={styles.message}>{message}</Text> : null}
-        <Pressable disabled={saving} onPress={save} style={styles.button}><Text style={styles.buttonText}>{saving ? 'Saving...' : editingEvent ? 'Update Event' : 'Add Event'}</Text></Pressable>
+        <Pressable disabled={saving} onPress={save} style={({ pressed }) => [styles.button, pressed && componentStyles.pressed, saving && componentStyles.disabled]}><Text style={styles.buttonText}>{saving ? 'Saving...' : editingEvent ? 'Update Event' : 'Add Event'}</Text></Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -98,12 +98,12 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg },
   title: { color: colors.text, marginBottom: spacing.md, ...typography.screenTitle },
   hint: { color: colors.secondaryText, marginBottom: spacing.sm, ...typography.caption },
-  input: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 10, borderWidth: 1, color: colors.text, marginBottom: spacing.sm, padding: spacing.md },
+  input: [componentStyles.input, { marginBottom: spacing.sm }],
   multiline: { minHeight: 100, textAlignVertical: 'top' },
-  message: { color: '#B42318', marginBottom: spacing.sm, textAlign: 'center' },
-  button: { backgroundColor: colors.primary, borderRadius: 10, padding: spacing.md },
-  buttonText: { color: colors.white, fontWeight: '600', textAlign: 'center' },
-  selector: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 10, borderWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm, padding: spacing.md },
+  message: { color: colors.dark, marginBottom: spacing.sm, textAlign: 'center' },
+  button: componentStyles.primaryButton,
+  buttonText: componentStyles.primaryButtonText,
+  selector: { ...componentStyles.input, alignItems: 'center', backgroundColor: colors.surface, flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm },
   selectorText: { color: colors.text },
   placeholder: { color: colors.secondaryText },
   selectorIcon: { color: colors.primary, fontWeight: '600' },

@@ -17,11 +17,26 @@ export const componentStyles = StyleSheet.create({
     borderRadius: radii.card,
     borderWidth: 1,
     padding: spacing.lg,
-    shadowColor: colors.text,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 1,
+  },
+  compactCard: {
+    borderRadius: radii.md,
+    padding: spacing.md,
+  },
+  mediaPlaceholder: {
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: radii.md,
+    justifyContent: 'center',
+  },
+  iconButton: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
   },
   primaryButton: {
     alignItems: 'center',
@@ -87,5 +102,11 @@ export const componentStyles = StyleSheet.create({
     backgroundColor: colors.border,
     height: 1,
     width: '100%',
+  },
+  pressed: {
+    opacity: 0.78,
+  },
+  disabled: {
+    opacity: 0.55,
   },
 });

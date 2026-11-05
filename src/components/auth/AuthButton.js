@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
-import { colors, radii, spacing, typography } from '../../theme';
+import { colors, componentStyles, typography } from '../../theme';
 
 export function AuthButton({ title, loading = false, ...props }) {
   return (
@@ -8,9 +8,9 @@ export function AuthButton({ title, loading = false, ...props }) {
       accessibilityRole="button"
       disabled={loading || props.disabled}
       style={({ pressed }) => [
-        styles.button,
-        pressed && !loading && styles.pressed,
-        (loading || props.disabled) && styles.disabled,
+        componentStyles.primaryButton,
+        pressed && !loading && !props.disabled && componentStyles.pressed,
+        (loading || props.disabled) && componentStyles.disabled,
       ]}
       {...props}
     >
@@ -24,20 +24,6 @@ export function AuthButton({ title, loading = false, ...props }) {
 }
 
 const styles = StyleSheet.create({
-  button: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: radii.md,
-    justifyContent: 'center',
-    minHeight: 48,
-    paddingHorizontal: spacing.xl,
-  },
-  pressed: {
-    backgroundColor: colors.dark,
-  },
-  disabled: {
-    opacity: 0.65,
-  },
   text: {
     color: colors.white,
     ...typography.label,

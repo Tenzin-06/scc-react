@@ -17,7 +17,7 @@ import ClubCard from '../../components/ClubCard';
 import { useAuth } from '../../contexts/AuthContext';
 import { addBookmark, getUserBookmarks, removeBookmark } from '../../repositories/bookmarkRepository';
 import { getAllClubs } from '../../repositories/clubRepository';
-import { colors, radii, spacing, typography } from '../../theme';
+import { colors, componentStyles, radii, spacing, typography } from '../../theme';
 
 function EmptyState({ onRetry, title, description }) {
   return (
@@ -107,7 +107,7 @@ export default function ClubsScreen({ navigation }) {
   function renderHeader() {
     return (
       <>
-        <Text style={styles.title}>Explore Clubs</Text>
+        <Text style={styles.title}>Explore clubs</Text>
         <Text style={styles.description}>
           Find communities and activities that match your interests.
         </Text>
@@ -122,7 +122,7 @@ export default function ClubsScreen({ navigation }) {
             value={search}
           />
           {search ? (
-            <Pressable accessibilityRole="button" onPress={() => setSearch('')}>
+            <Pressable accessibilityRole="button" onPress={() => setSearch('')} style={styles.clearButton}>
               <Text style={styles.clearText}>Clear</Text>
             </Pressable>
           ) : null}
@@ -134,10 +134,13 @@ export default function ClubsScreen({ navigation }) {
           keyExtractor={(category) => category}
           renderItem={({ item: category }) => (
             <Pressable
+              accessibilityRole="tab"
+              accessibilityState={{ selected: selectedCategory === category }}
               onPress={() => setSelectedCategory(category)}
-              style={[
+              style={({ pressed }) => [
                 styles.categoryChip,
                 selectedCategory === category && styles.selectedCategoryChip,
+                pressed && styles.pressed,
               ]}
             >
               <Text
@@ -256,15 +259,22 @@ const styles = StyleSheet.create({
     color: colors.primary,
     ...typography.caption,
   },
+  clearButton: {
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: spacing.xs,
+  },
   categories: {
     gap: spacing.sm,
     paddingVertical: spacing.lg,
   },
   categoryChip: {
+    alignItems: 'center',
     backgroundColor: colors.chip,
     borderRadius: radii.pill,
+    justifyContent: 'center',
+    minHeight: 44,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
   },
   selectedCategoryChip: {
     backgroundColor: colors.primary,
@@ -305,14 +315,12 @@ const styles = StyleSheet.create({
     ...typography.secondary,
   },
   retryButton: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.md,
+    ...componentStyles.primaryButton,
     marginTop: spacing.lg,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.md,
   },
   retryText: {
     color: colors.white,
-    fontWeight: '600',
+    ...typography.label,
   },
+  pressed: componentStyles.pressed,
 });

@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AppIcon from '../../components/AppIcon';
 import { getClubById } from '../../repositories/clubRepository';
 import { getAnnouncementById } from '../../repositories/announcementRepository';
-import { colors, radii, spacing, typography } from '../../theme';
+import { colors, componentStyles, spacing, typography } from '../../theme';
 import { getAnnouncementDateTime } from '../../utils/announcementDate';
 
 export default function AnnouncementDetailsScreen({ navigation, route }) {
@@ -52,7 +52,7 @@ export default function AnnouncementDetailsScreen({ navigation, route }) {
       <SafeAreaView style={styles.centered}>
         <Text style={styles.title}>{announcement ? 'Unable to load announcement.' : 'Announcement not found.'}</Text>
         <Text style={styles.message}>{error || 'Return to the announcements list and choose another announcement.'}</Text>
-        <Pressable onPress={announcement ? loadAnnouncement : navigation.goBack} style={styles.button}>
+        <Pressable accessibilityRole="button" onPress={announcement ? loadAnnouncement : navigation.goBack} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
           <Text style={styles.buttonText}>{announcement ? 'Retry' : 'Go Back'}</Text>
         </Pressable>
       </SafeAreaView>
@@ -79,12 +79,13 @@ const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   centered: { alignItems: 'center', backgroundColor: colors.background, flex: 1, justifyContent: 'center', padding: spacing.xxl },
-  icon: { alignItems: 'center', alignSelf: 'center', backgroundColor: '#E8EEF7', borderRadius: radii.md, height: 56, justifyContent: 'center', width: 56 },
+  icon: { ...componentStyles.mediaPlaceholder, alignSelf: 'center', height: 56, width: 56 },
   title: { color: colors.text, marginTop: spacing.lg, textAlign: 'center', ...typography.screenTitle },
   meta: { color: colors.secondaryText, marginTop: spacing.sm, textAlign: 'center', ...typography.caption },
-  card: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.card, borderWidth: 1, marginTop: spacing.xl, padding: spacing.lg },
+  card: { ...componentStyles.card, marginTop: spacing.xl },
   messageBody: { color: colors.text, lineHeight: 24, ...typography.body },
   message: { color: colors.secondaryText, marginTop: spacing.sm, textAlign: 'center', ...typography.secondary },
-  button: { backgroundColor: colors.primary, borderRadius: 10, marginTop: spacing.xl, paddingHorizontal: spacing.xxl, paddingVertical: spacing.md },
-  buttonText: { color: colors.white, fontWeight: '600' },
+  button: { ...componentStyles.primaryButton, marginTop: spacing.xl },
+  buttonText: { color: colors.white, ...typography.label },
+  pressed: componentStyles.pressed,
 });

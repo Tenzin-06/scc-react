@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radii, spacing, typography } from '../../theme';
 
-export function AuthSelect({ label, options, onValueChange, placeholder, value }) {
+export function AuthSelect({ disabled = false, emptyMessage = 'No options available.', label, options = [], onValueChange, placeholder, value }) {
   const [visible, setVisible] = useState(false);
 
   function selectOption(option) {
@@ -17,8 +17,10 @@ export function AuthSelect({ label, options, onValueChange, placeholder, value }
       <Pressable
         accessibilityLabel={`${label}: ${value || placeholder}`}
         accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        disabled={disabled}
         onPress={() => setVisible(true)}
-        style={styles.field}
+        style={[styles.field, disabled && styles.disabledField]}
       >
         <Text style={value ? styles.value : styles.placeholder}>
           {value || placeholder}
@@ -35,18 +37,22 @@ export function AuthSelect({ label, options, onValueChange, placeholder, value }
         <Pressable onPress={() => setVisible(false)} style={styles.overlay}>
           <Pressable onPress={(event) => event.stopPropagation()} style={styles.menu}>
             <Text style={styles.menuTitle}>Select {label}</Text>
-            {options.map((option) => (
-              <Pressable
-                accessibilityRole="button"
-                key={option}
-                onPress={() => selectOption(option)}
-                style={[styles.option, option === value && styles.selectedOption]}
-              >
-                <Text style={[styles.optionText, option === value && styles.selectedOptionText]}>
-                  {option}
-                </Text>
-              </Pressable>
-            ))}
+            {options.length ? (
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator style={styles.optionsList}>
+                {options.map((option) => (
+                  <Pressable
+                    accessibilityRole="button"
+                    key={option}
+                    onPress={() => selectOption(option)}
+                    style={[styles.option, option === value && styles.selectedOption]}
+                  >
+                    <Text style={[styles.optionText, option === value && styles.selectedOptionText]}>
+                      {option}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : <Text style={styles.emptyMessage}>{emptyMessage}</Text>}
           </Pressable>
         </Pressable>
       </Modal>
@@ -61,18 +67,21 @@ const styles = StyleSheet.create({
   label: {
     color: colors.text,
     marginBottom: spacing.xs,
-    ...typography.caption,
+    ...typography.label,
   },
   field: {
     alignItems: 'center',
     backgroundColor: colors.input,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: radii.md,
     borderWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     minHeight: 48,
     paddingHorizontal: spacing.lg,
+  },
+  disabledField: {
+    opacity: 0.65,
   },
   value: {
     color: colors.text,
@@ -106,6 +115,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     ...typography.cardTitle,
   },
+  optionsList: {
+    maxHeight: 360,
+  },
   option: {
     borderRadius: radii.sm,
     paddingHorizontal: spacing.md,
@@ -117,6 +129,12 @@ const styles = StyleSheet.create({
   optionText: {
     color: colors.text,
     ...typography.body,
+  },
+  emptyMessage: {
+    color: colors.secondaryText,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    ...typography.secondary,
   },
   selectedOptionText: {
     color: colors.primary,

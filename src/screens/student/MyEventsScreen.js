@@ -6,7 +6,7 @@ import EventCard from '../../components/EventCard';
 import { useAuth } from '../../contexts/AuthContext';
 import { getClubById } from '../../repositories/clubRepository';
 import { getRegisteredEvents } from '../../repositories/eventRegistrationRepository';
-import { colors, spacing, typography } from '../../theme';
+import { colors, componentStyles, spacing, typography } from '../../theme';
 
 export default function MyEventsScreen({ navigation }) {
   const { user } = useAuth();
@@ -50,7 +50,7 @@ export default function MyEventsScreen({ navigation }) {
       <SafeAreaView style={styles.centered}>
         <Text style={styles.title}>Unable to load your registered events.</Text>
         <Text style={styles.message}>{error}</Text>
-        <Pressable onPress={loadEvents} style={styles.button}><Text style={styles.buttonText}>Retry</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={loadEvents} style={({ pressed }) => [styles.button, pressed && styles.pressed]}><Text style={styles.buttonText}>Retry</Text></Pressable>
       </SafeAreaView>
     );
   }
@@ -61,10 +61,15 @@ export default function MyEventsScreen({ navigation }) {
         contentContainerStyle={styles.content}
         data={events}
         keyExtractor={(event) => event.id}
+        ListHeaderComponent={(
+          <View style={styles.header}>
+            <Text style={styles.subtitle}>Events you have registered for.</Text>
+          </View>
+        )}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.title}>You haven&apos;t registered for any events yet.</Text>
-            <Pressable onPress={() => navigation.navigate('StudentTabs', { screen: 'Events' })} style={styles.button}>
+            <Pressable accessibilityRole="button" onPress={() => navigation.navigate('StudentTabs', { screen: 'Events' })} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
               <Text style={styles.buttonText}>Browse Events</Text>
             </Pressable>
           </View>
@@ -80,11 +85,14 @@ export default function MyEventsScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
-  content: { padding: spacing.lg },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
+  header: { marginBottom: spacing.lg },
   centered: { alignItems: 'center', backgroundColor: colors.background, flex: 1, justifyContent: 'center', padding: spacing.xxl },
   empty: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.xxxl },
   title: { color: colors.text, textAlign: 'center', ...typography.sectionHeading },
+  subtitle: { color: colors.secondaryText, marginTop: spacing.xs, ...typography.secondary },
   message: { color: colors.secondaryText, marginTop: spacing.sm, textAlign: 'center', ...typography.secondary },
-  button: { backgroundColor: colors.primary, borderRadius: 10, marginTop: spacing.xl, paddingHorizontal: spacing.xxl, paddingVertical: spacing.md },
-  buttonText: { color: colors.white, fontWeight: '600' },
+  button: { ...componentStyles.primaryButton, marginTop: spacing.xl },
+  buttonText: { color: colors.white, ...typography.label },
+  pressed: componentStyles.pressed,
 });

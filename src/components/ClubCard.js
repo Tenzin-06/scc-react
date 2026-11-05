@@ -2,11 +2,11 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import AppIcon from './AppIcon';
 import BookmarkButton from './BookmarkButton';
-import { colors, radii, spacing, typography } from '../theme';
+import { colors, componentStyles, radii, spacing, typography } from '../theme';
 
-export default function ClubCard({ club, compact = false, onMenu, onPress, bookmarked, bookmarkLoading, onBookmark }) {
+export default function ClubCard({ club, compact = false, metadataLabel, metadataValue, onMenu, onPress, bookmarked, bookmarkLoading, onBookmark }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={[styles.card, compact && styles.compactCard]}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.card, compact && styles.compactCard, pressed && onPress && styles.pressed]}>
       <View style={[styles.imageContainer, compact && styles.compactImageContainer]}>
         {club.imageUrl ? (
           <Image source={{ uri: club.imageUrl }} style={[styles.image, compact && styles.compactImage]} />
@@ -15,19 +15,34 @@ export default function ClubCard({ club, compact = false, onMenu, onPress, bookm
             <AppIcon color={colors.primary} name="clubs" size={30} />
           </View>
         )}
-        {onMenu ? (
-          <Pressable accessibilityLabel={`Actions for ${club.name}`} onPress={(event) => { event.stopPropagation(); onMenu(); }} style={styles.menuButton}>
-            <AppIcon color={colors.text} name="menu" size={18} />
-          </Pressable>
-        ) : null}
-        {onBookmark ? <View style={styles.bookmarkButton}><BookmarkButton bookmarked={bookmarked} disabled={bookmarkLoading} label="club" onPress={onBookmark} /></View> : null}
       </View>
       <View style={compact && styles.compactDetails}>
-        <Text numberOfLines={1} style={styles.name}>{club.name}</Text>
-        <Text style={styles.category}>{club.category || 'Student club'}</Text>
-        <Text style={styles.members}>{club.memberCount || 0} Members</Text>
+        <View style={compact && styles.detailsHeader}>
+          <Text numberOfLines={1} style={[styles.name, compact && styles.compactName]}>{club.name}</Text>
+          {compact && (onMenu || onBookmark) ? (
+            <View style={styles.actions}>
+              {onBookmark ? <BookmarkButton bookmarked={bookmarked} disabled={bookmarkLoading} label="club" onPress={onBookmark} /> : null}
+              {onMenu ? (
+                <Pressable accessibilityLabel={`Actions for ${club.name}`} accessibilityRole="button" onPress={(event) => { event.stopPropagation(); onMenu(); }} style={({ pressed }) => [styles.menuButton, pressed && styles.actionPressed]}>
+                  <AppIcon color={colors.text} name="menu" size={18} />
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+        <Text numberOfLines={1} style={styles.category}>{club.category || 'Student club'}</Text>
+        <View style={styles.memberCount}>
+          <AppIcon color={colors.primary} name="clubs" size={13} />
+          <Text style={styles.members}>{club.memberCount || 0} members</Text>
+        </View>
         <Text numberOfLines={compact ? 2 : 2} style={styles.description}>{club.description}</Text>
-        {compact ? <View style={styles.viewClub}><Text style={styles.viewClubText}>View Club</Text><Text style={styles.arrow}>›</Text></View> : null}
+        {metadataLabel && metadataValue ? (
+          <View style={styles.metadata}>
+            <Text style={styles.metadataLabel}>{metadataLabel}</Text>
+            <Text numberOfLines={1} style={styles.metadataValue}>{metadataValue}</Text>
+          </View>
+        ) : null}
+        {compact && onPress ? <View style={styles.viewClub}><Text style={styles.viewClubText}>View club</Text><Text style={styles.arrow}>›</Text></View> : null}
       </View>
     </Pressable>
   );
@@ -35,48 +50,44 @@ export default function ClubCard({ club, compact = false, onMenu, onPress, bookm
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.card,
-    borderWidth: 1,
+    ...componentStyles.card,
     marginRight: spacing.md,
     padding: spacing.md,
     width: 190,
   },
   compactCard: {
+    ...componentStyles.compactCard,
+    alignItems: 'center',
     flexDirection: 'row',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     marginRight: 0,
-    padding: spacing.sm,
+    padding: spacing.md,
     width: '100%',
   },
   imagePlaceholder: {
-    alignItems: 'center',
-    backgroundColor: '#E8EEF7',
-    borderRadius: radii.md,
+    ...componentStyles.mediaPlaceholder,
     height: 82,
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
-  imageContainer: {
-    position: 'relative',
-  },
-  compactImageContainer: { alignSelf: 'flex-start', marginRight: spacing.md },
-  compactImage: { height: 72, marginBottom: 0, width: 72 },
+  imageContainer: {},
+  compactImageContainer: { marginRight: spacing.md },
+  compactImage: { borderRadius: radii.md, height: 84, marginBottom: 0, width: 84 },
   compactDetails: { flex: 1, minWidth: 0 },
   menuButton: {
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    elevation: 2,
-    height: 32,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    height: 40,
     justifyContent: 'center',
-    position: 'absolute',
-    right: spacing.sm,
-    top: spacing.sm,
-    width: 32,
+    width: 40,
   },
-  bookmarkButton: { position: 'absolute', left: spacing.sm, top: spacing.sm },
+  detailsHeader: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  compactName: { flex: 1, minWidth: 0 },
+  actions: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  actionPressed: componentStyles.pressed,
   image: {
     borderRadius: radii.md,
     height: 82,
@@ -92,20 +103,39 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     ...typography.caption,
   },
-  members: { color: colors.primary, fontSize: 10, marginTop: 2 },
+  memberCount: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.chip,
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  members: { color: colors.dark, ...typography.caption },
   description: {
     color: colors.secondaryText,
     marginTop: spacing.sm,
     ...typography.caption,
   },
+  metadata: {
+    alignItems: 'baseline',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  metadataLabel: { color: colors.secondaryText, ...typography.caption },
+  metadataValue: { color: colors.dark, flex: 1, ...typography.caption },
   viewClub: {
     borderTopColor: colors.border,
     borderTopWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
+    marginTop: spacing.xs,
+    paddingTop: spacing.xs,
   },
-  viewClubText: { color: colors.primary, fontSize: 11, fontWeight: '600' },
-  arrow: { color: colors.primary, fontSize: 18, lineHeight: 12 },
+  viewClubText: { color: colors.primary, ...typography.label },
+  arrow: { color: colors.primary, fontSize: 19, lineHeight: 20 },
+  pressed: componentStyles.pressed,
 });

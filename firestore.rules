@@ -10,6 +10,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/users/$(uid);
     }
 
+    function clubPath(clubId) {
+      return /databases/$(database)/documents/clubs/$(clubId);
+    }
+
     function hasValidRole() {
       return signedIn()
         && exists(userPath(request.auth.uid))
@@ -24,6 +28,77 @@ service cloud.firestore {
 
     function isAdmin() {
       return hasRole('admin');
+    }
+
+    function promoteStudentAfter(uid) {
+      let clubId = request.resource.data.get('presidentOf', null);
+      return resource.data.role == 'student'
+        && resource.data.get('presidentOf', null) == null
+        && request.resource.data.role == 'president'
+        && clubId is string
+        && existsAfter(clubPath(clubId))
+        && getAfter(clubPath(clubId)).data.get('presidentId', null) == uid;
+    }
+
+    function demotePresidentAfter(uid) {
+      let clubId = resource.data.get('presidentOf', null);
+      return resource.data.role == 'president'
+        && clubId is string
+        && request.resource.data.role == 'student'
+        && request.resource.data.get('presidentOf', null) == null
+        && existsAfter(clubPath(clubId))
+        && getAfter(clubPath(clubId)).data.get('presidentId', null) != uid;
+    }
+
+    function linkPresidentAfter(uid) {
+      let clubId = request.resource.data.get('presidentOf', null);
+      return resource.data.role == 'president'
+        && resource.data.get('presidentOf', null) == null
+        && request.resource.data.role == 'president'
+        && clubId is string
+        && existsAfter(clubPath(clubId))
+        && getAfter(clubPath(clubId)).data.get('presidentId', null) == uid;
+    }
+
+    function adminPresidentProfileChange(uid) {
+      return isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['role', 'presidentOf', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time
+        && (
+          promoteStudentAfter(uid)
+          || demotePresidentAfter(uid)
+          || linkPresidentAfter(uid)
+        );
+    }
+
+    function presidentAssignmentAfter(clubId, previousPresidentId, nextPresidentId) {
+      return (
+        nextPresidentId is string
+        && existsAfter(userPath(nextPresidentId))
+        && getAfter(userPath(nextPresidentId)).data.role == 'president'
+        && getAfter(userPath(nextPresidentId)).data.get('presidentOf', null) == clubId
+        && (
+          previousPresidentId == null
+          || previousPresidentId == ''
+          || previousPresidentId == nextPresidentId
+          || (
+            existsAfter(userPath(previousPresidentId))
+            && getAfter(userPath(previousPresidentId)).data.role == 'student'
+            && getAfter(userPath(previousPresidentId)).data.get('presidentOf', null) == null
+          )
+        )
+      ) || (
+        nextPresidentId == null
+        && previousPresidentId == ''
+      ) || (
+        nextPresidentId == null
+        && previousPresidentId is string
+        && previousPresidentId != ''
+        && existsAfter(userPath(previousPresidentId))
+        && getAfter(userPath(previousPresidentId)).data.role == 'student'
+        && getAfter(userPath(previousPresidentId)).data.get('presidentOf', null) == null
+      );
     }
 
     // Both stored assignment references must agree. A stale club or profile
@@ -43,7 +118,7 @@ service cloud.firestore {
     function selfJoinCountUpdate(clubId) {
       return hasValidRole()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount'])
-        && request.resource.data.memberCount == resource.data.memberCount + 1
+        && request.resource.data.memberCount == resource.data.get('memberCount', 0) + 1
         && !exists(ownMembershipPath(clubId))
         && existsAfter(ownMembershipPath(clubId))
         && getAfter(ownMembershipPath(clubId)).data.get('userId', null) == request.auth.uid
@@ -54,8 +129,9 @@ service cloud.firestore {
     function selfLeaveCountUpdate(clubId) {
       return hasValidRole()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount'])
-        && resource.data.memberCount > 0
-        && request.resource.data.memberCount == resource.data.memberCount - 1
+        && request.resource.data.memberCount == (resource.data.get('memberCount', 0) > 0
+          ? resource.data.get('memberCount', 0) - 1
+          : 0)
         && exists(ownMembershipPath(clubId))
         && get(ownMembershipPath(clubId)).data.get('userId', null) == request.auth.uid
         && !existsAfter(ownMembershipPath(clubId));
@@ -90,7 +166,7 @@ service cloud.firestore {
 
     function validClub(data) {
       return data.keys().hasOnly([
-          'name', 'description', 'category', 'presidentId', 'imageUrl',
+          'name', 'description', 'category', 'presidentId', 'presidentName', 'imageUrl',
           'memberCount', 'createdAt', 'updatedAt'
         ])
         && data.keys().hasAll([
@@ -102,6 +178,7 @@ service cloud.firestore {
         && data.description is string
         && data.category is string
         && (data.presidentId == null || data.presidentId is string)
+        && (!('presidentName' in data) || data.presidentName is string)
         && data.imageUrl is string
         && data.memberCount is int
         && data.memberCount >= 0
@@ -160,21 +237,26 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
 
-      // Ordinary clients, including admins, cannot change roles or assignments.
-      // These fields require a trusted Admin SDK workflow, which bypasses rules.
+      // Admin role/assignment changes are limited to the atomic president
+      // promotion, replacement, and demotion paths verified below.
       allow update: if signedIn()
         && validProfile(request.resource.data, userId)
         && request.resource.data.uid == resource.data.uid
-        && request.resource.data.role == resource.data.role
-        && request.resource.data.get('presidentOf', null)
-          == resource.data.get('presidentOf', null)
         && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'fullName', 'studentId', 'email', 'programme', 'department',
-          'semester', 'phone', 'updatedAt'
-        ])
         && request.resource.data.updatedAt == request.time
-        && (request.auth.uid == userId || isAdmin());
+        && (
+          (
+            request.resource.data.role == resource.data.role
+            && request.resource.data.get('presidentOf', null)
+              == resource.data.get('presidentOf', null)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'fullName', 'studentId', 'email', 'programme', 'department',
+              'semester', 'phone', 'updatedAt'
+            ])
+            && (request.auth.uid == userId || isAdmin())
+          )
+          || adminPresidentProfileChange(userId)
+        );
 
       allow delete: if isAdmin();
     }
@@ -186,13 +268,29 @@ service cloud.firestore {
         && validClub(request.resource.data)
         && !('updatedAt' in request.resource.data)
         && request.resource.data.memberCount == 0
-        && request.resource.data.createdAt == request.time;
+        && request.resource.data.createdAt == request.time
+        && (
+          request.resource.data.presidentId == null
+          || (
+            existsAfter(userPath(request.resource.data.presidentId))
+            && getAfter(userPath(request.resource.data.presidentId)).data.role == 'president'
+            && getAfter(userPath(request.resource.data.presidentId)).data.get('presidentOf', null) == clubId
+          )
+        );
 
       allow update: if isAdmin()
         && validClub(request.resource.data)
         && request.resource.data.memberCount == resource.data.memberCount
         && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.updatedAt == request.time;
+        && request.resource.data.updatedAt == request.time
+        && (
+          request.resource.data.presidentId == resource.data.presidentId
+          || presidentAssignmentAfter(
+            clubId,
+            resource.data.get('presidentId', null),
+            request.resource.data.presidentId
+          )
+        );
 
       allow update: if isPresidentOfClub(clubId)
         && validClub(request.resource.data)
@@ -222,17 +320,18 @@ service cloud.firestore {
         allow list: if isAdmin() || isPresidentOfClub(clubId);
 
         allow create: if hasValidRole()
-          && request.resource.data.keys().hasOnly(['userId', 'joinedAt', 'role'])
+          && request.resource.data.keys().hasOnly(['userId', 'joinedAt', 'role', 'displayName'])
           && request.resource.data.keys().hasAll(['userId', 'joinedAt', 'role'])
           && request.resource.data.userId == userId
           && request.resource.data.role == 'member'
+          && (!('displayName' in request.resource.data) || request.resource.data.displayName is string)
           && request.resource.data.joinedAt == request.time
           && exists(/databases/$(database)/documents/clubs/$(clubId))
           && request.auth.uid == userId
           && getAfter(/databases/$(database)/documents/clubs/$(clubId))
             .data.memberCount
             == get(/databases/$(database)/documents/clubs/$(clubId))
-              .data.memberCount + 1;
+              .data.get('memberCount', 0) + 1;
 
         allow update: if false;
         allow delete: if hasValidRole()
@@ -240,8 +339,11 @@ service cloud.firestore {
           && exists(/databases/$(database)/documents/clubs/$(clubId))
           && getAfter(/databases/$(database)/documents/clubs/$(clubId))
             .data.memberCount
-            == get(/databases/$(database)/documents/clubs/$(clubId))
-              .data.memberCount - 1;
+            == (
+              get(/databases/$(database)/documents/clubs/$(clubId)).data.get('memberCount', 0) > 0
+                ? get(/databases/$(database)/documents/clubs/$(clubId)).data.get('memberCount', 0) - 1
+                : 0
+            );
       }
     }
 

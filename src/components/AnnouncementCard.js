@@ -1,12 +1,12 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import AppIcon from './AppIcon';
-import { colors, radii, spacing, typography } from '../theme';
+import { colors, componentStyles, radii, spacing, typography } from '../theme';
 import { getAnnouncementDate } from '../utils/announcementDate';
 
 export default function AnnouncementCard({ announcement, onMenu, onPress }) {
   return (
-    <Pressable accessibilityRole="button" disabled={!onPress} onPress={onPress} style={styles.card}>
+    <Pressable accessibilityRole="button" disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.card, pressed && onPress && styles.pressed]}>
       <View style={styles.icon}>
         <AppIcon color={colors.primary} name="bell" size={18} />
       </View>
@@ -24,17 +24,15 @@ export default function AnnouncementCard({ announcement, onMenu, onPress }) {
 
 const styles = StyleSheet.create({
   card: {
+    ...componentStyles.card,
     backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
     flexDirection: 'row',
     marginBottom: spacing.sm,
     padding: spacing.md,
   },
   icon: {
     alignItems: 'center',
-    backgroundColor: '#E8EEF7',
+    backgroundColor: colors.background,
     borderRadius: radii.sm,
     height: 36,
     justifyContent: 'center',
@@ -58,5 +56,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     ...typography.caption,
   },
-  menuButton: { alignItems: 'center', backgroundColor: colors.surface, borderRadius: 16, elevation: 2, height: 32, justifyContent: 'center', width: 32 },
+  menuButton: { ...componentStyles.iconButton, borderRadius: radii.md },
+  pressed: componentStyles.pressed,
 });

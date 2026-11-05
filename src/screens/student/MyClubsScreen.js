@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ClubCard from '../../components/ClubCard';
 import { useAuth } from '../../contexts/AuthContext';
 import { getJoinedClubs } from '../../repositories/membershipRepository';
-import { colors, spacing, typography } from '../../theme';
+import { colors, componentStyles, spacing, typography } from '../../theme';
 
 export default function MyClubsScreen({ navigation }) {
   const { user } = useAuth();
@@ -31,9 +32,7 @@ export default function MyClubsScreen({ navigation }) {
     }
   }, [user?.uid]);
 
-  useEffect(() => {
-    loadClubs();
-  }, [loadClubs]);
+  useFocusEffect(useCallback(() => { loadClubs(); }, [loadClubs]));
 
   if (loading) {
     return (
@@ -46,9 +45,9 @@ export default function MyClubsScreen({ navigation }) {
   if (error) {
     return (
       <SafeAreaView style={styles.centered}>
-        <Text style={styles.title}>Unable to load your clubs.</Text>
+        <Text style={styles.errorTitle}>Unable to load your clubs.</Text>
         <Text style={styles.message}>{error}</Text>
-        <Pressable onPress={loadClubs} style={styles.button}>
+        <Pressable accessibilityRole="button" onPress={loadClubs} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
           <Text style={styles.buttonText}>Retry</Text>
         </Pressable>
       </SafeAreaView>
@@ -61,11 +60,16 @@ export default function MyClubsScreen({ navigation }) {
         contentContainerStyle={styles.content}
         data={clubs}
         keyExtractor={(club) => club.id}
+        ListHeaderComponent={(
+          <View style={styles.header}>
+            <Text style={styles.subtitle}>Clubs you have joined.</Text>
+          </View>
+        )}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.title}>You haven&apos;t joined any clubs yet.</Text>
+            <Text style={styles.emptyTitle}>You haven&apos;t joined any clubs yet.</Text>
             <Text style={styles.message}>Explore clubs and join one to get started.</Text>
-            <Pressable onPress={() => navigation.navigate('Clubs')} style={styles.button}>
+            <Pressable accessibilityRole="button" onPress={() => navigation.navigate('Clubs')} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
               <Text style={styles.buttonText}>Explore Clubs</Text>
             </Pressable>
           </View>
@@ -89,6 +93,10 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+    paddingBottom: spacing.xxxl,
+  },
+  header: {
+    marginBottom: spacing.lg,
   },
   centered: {
     alignItems: 'center',
@@ -101,10 +109,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: spacing.xxxl,
   },
-  title: {
+  errorTitle: {
     color: colors.text,
     textAlign: 'center',
     ...typography.sectionHeading,
+  },
+  emptyTitle: {
+    color: colors.text,
+    textAlign: 'center',
+    ...typography.sectionHeading,
+  },
+  subtitle: {
+    color: colors.secondaryText,
+    marginTop: spacing.xs,
+    ...typography.secondary,
   },
   message: {
     color: colors.secondaryText,
@@ -113,14 +131,12 @@ const styles = StyleSheet.create({
     ...typography.secondary,
   },
   button: {
-    backgroundColor: colors.primary,
-    borderRadius: 10,
+    ...componentStyles.primaryButton,
     marginTop: spacing.xl,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.md,
   },
   buttonText: {
     color: colors.white,
-    fontWeight: '600',
+    ...typography.label,
   },
+  pressed: componentStyles.pressed,
 });

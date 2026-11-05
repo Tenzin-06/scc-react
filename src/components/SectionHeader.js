@@ -7,7 +7,7 @@ export default function SectionHeader({ onPress, title }) {
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>
       {onPress ? (
-        <Pressable accessibilityRole="button" onPress={onPress}>
+        <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
           <Text style={styles.action}>See All</Text>
         </Pressable>
       ) : null}
@@ -30,4 +30,5 @@ const styles = StyleSheet.create({
     color: colors.primary,
     ...typography.secondary,
   },
+  pressed: { opacity: 0.65 },
 });

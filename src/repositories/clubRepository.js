@@ -7,6 +7,7 @@ import {
   getDocs,
   serverTimestamp,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
 
 import { db } from '../services/firebase';
@@ -153,6 +154,91 @@ export async function updateClub(clubId, updatedData = {}) {
     return { id: clubId.trim(), ...permittedUpdates };
   } catch (error) {
     throw createClubError(getClubErrorMessage(error, 'update'), error?.code);
+  }
+}
+
+export async function saveClubWithPresident(clubData = {}, clubId = null) {
+  validateClubName(clubData.name);
+  if (clubId) validateClubId(clubId);
+
+  const existingClubRef = clubId ? doc(db, 'clubs', clubId.trim()) : null;
+  const clubRef = existingClubRef || doc(clubsCollection);
+  const selectedPresidentId = normalizeOptionalText(clubData.presidentId, null) || null;
+
+  try {
+    const existingSnapshot = existingClubRef ? await getDoc(existingClubRef) : null;
+    if (existingSnapshot && !existingSnapshot.exists()) {
+      throw createClubError('The requested club could not be found.', 'firestore/club-not-found');
+    }
+
+    const existingPresidentId = existingSnapshot?.data()?.presidentId || null;
+    const selectedProfileRef = selectedPresidentId ? doc(db, 'users', selectedPresidentId) : null;
+    const previousProfileRef = existingPresidentId && existingPresidentId !== selectedPresidentId
+      ? doc(db, 'users', existingPresidentId)
+      : null;
+    const [selectedProfileSnapshot, previousProfileSnapshot] = await Promise.all([
+      selectedProfileRef ? getDoc(selectedProfileRef) : Promise.resolve(null),
+      previousProfileRef ? getDoc(previousProfileRef) : Promise.resolve(null),
+    ]);
+
+    const batch = writeBatch(db);
+    const timestamp = serverTimestamp();
+    const clubFields = {
+      name: clubData.name.trim(),
+      description: normalizeOptionalText(clubData.description, ''),
+      category: normalizeOptionalText(clubData.category, ''),
+      presidentId: selectedPresidentId,
+      presidentName: selectedPresidentId ? selectedProfileSnapshot?.data()?.fullName || '' : '',
+      imageUrl: normalizeOptionalText(clubData.imageUrl, ''),
+    };
+
+    if (selectedPresidentId) {
+      if (!selectedProfileSnapshot?.exists()) {
+        throw createClubError('The selected student profile could not be found.', 'firestore/invalid-president');
+      }
+      const selectedProfile = selectedProfileSnapshot.data();
+      const selectedRole = typeof selectedProfile.role === 'string'
+        ? selectedProfile.role.trim().toLowerCase()
+        : '';
+      if (selectedRole === 'student' && !selectedProfile.presidentOf) {
+        batch.update(selectedProfileRef, {
+          role: 'president',
+          presidentOf: clubRef.id,
+          updatedAt: timestamp,
+        });
+      } else if (selectedRole !== 'president' || selectedProfile.presidentOf !== clubRef.id) {
+        throw createClubError('This student is already assigned to another role or club.', 'firestore/invalid-president');
+      }
+    }
+
+    if (previousProfileRef) {
+      if (!previousProfileSnapshot?.exists()) {
+        throw createClubError('The current president profile could not be found.', 'firestore/invalid-president');
+      }
+      const previousProfile = previousProfileSnapshot.data();
+      if (previousProfile.role !== 'president' || previousProfile.presidentOf !== clubRef.id) {
+        throw createClubError('The current president assignment is inconsistent. Please contact support.', 'firestore/invalid-president');
+      }
+      batch.update(previousProfileRef, {
+        role: 'student',
+        presidentOf: null,
+        updatedAt: timestamp,
+      });
+    }
+
+    if (existingSnapshot) {
+      batch.update(clubRef, { ...clubFields, updatedAt: timestamp });
+    } else {
+      batch.set(clubRef, { ...clubFields, memberCount: 0, createdAt: timestamp });
+    }
+
+    await batch.commit();
+    return { id: clubRef.id, ...clubFields };
+  } catch (error) {
+    if (error?.code === 'firestore/club-not-found' || error?.code === 'firestore/invalid-president') {
+      throw error;
+    }
+    throw createClubError(getClubErrorMessage(error, clubId ? 'update' : 'create'), error?.code);
   }
 }
 

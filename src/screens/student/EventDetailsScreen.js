@@ -1,22 +1,27 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppIcon from '../../components/AppIcon';
 import BookmarkButton from '../../components/BookmarkButton';
+import AnnouncementCard from '../../components/AnnouncementCard';
+import StickyActionBar from '../../components/StickyActionBar';
 import { useAuth } from '../../contexts/AuthContext';
 import useBookmark from '../../hooks/useBookmark';
 import { getClubById } from '../../repositories/clubRepository';
-import { getEventById } from '../../repositories/eventRepository';
+import { getAllEvents, getEventById } from '../../repositories/eventRepository';
+import { getAnnouncementsByClub } from '../../repositories/announcementRepository';
+import { getClubMembers } from '../../repositories/membershipRepository';
+import { isUpcomingEvent, sortEventsByDate } from '../../utils/eventDate';
 import {
   cancelEventRegistration,
   checkEventRegistration,
   registerForEvent,
 } from '../../repositories/eventRegistrationRepository';
-import { colors, radii, spacing, typography } from '../../theme';
+import { colors, componentStyles, spacing, typography } from '../../theme';
 
 export default function EventDetailsScreen({ navigation, route }) {
-  const { user } = useAuth();
+  const { user, userProfile, role } = useAuth();
   const eventId = route?.params?.eventId;
   const bookmark = useBookmark(user?.uid, eventId, 'event');
   const [event, setEvent] = useState(null);
@@ -26,6 +31,10 @@ export default function EventDetailsScreen({ navigation, route }) {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [tab, setTab] = useState('About');
+  const [clubEvents, setClubEvents] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [members, setMembers] = useState([]);
 
   const loadDetails = useCallback(async () => {
     if (!eventId || !user?.uid) {
@@ -45,12 +54,23 @@ export default function EventDetailsScreen({ navigation, route }) {
       setEvent(nextEvent);
       setClub(nextEvent.clubId ? await getClubById(nextEvent.clubId).catch(() => null) : null);
       setRegistered(await checkEventRegistration(user.uid, eventId));
+      if (nextEvent.clubId) {
+        const canViewMembers = role === 'admin' || (role === 'president' && userProfile?.presidentOf === nextEvent.clubId);
+        const [allEvents, nextAnnouncements, nextMembers] = await Promise.all([
+          getAllEvents().catch(() => []),
+          getAnnouncementsByClub(nextEvent.clubId).catch(() => []),
+          canViewMembers ? getClubMembers(nextEvent.clubId).catch(() => []) : Promise.resolve([]),
+        ]);
+        setClubEvents(sortEventsByDate(allEvents.filter((item) => item.clubId === nextEvent.clubId && item.id !== nextEvent.id && isUpcomingEvent(item))));
+        setAnnouncements(nextAnnouncements);
+        setMembers(nextMembers);
+      }
     } catch (loadError) {
       setError(loadError.message || 'Unable to load event details. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
-  }, [eventId, user?.uid]);
+  }, [eventId, role, user?.uid, userProfile?.presidentOf]);
 
   useEffect(() => {
     loadDetails();
@@ -105,7 +125,7 @@ export default function EventDetailsScreen({ navigation, route }) {
       <SafeAreaView style={styles.centered}>
         <Text style={styles.title}>{event ? 'Unable to load event details.' : 'Event not found.'}</Text>
         <Text style={styles.message}>{error || 'Return to the Events screen and choose another event.'}</Text>
-        <Pressable onPress={event ? loadDetails : navigation.goBack} style={styles.button}>
+        <Pressable accessibilityRole="button" onPress={event ? loadDetails : navigation.goBack} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
           <Text style={styles.buttonText}>{event ? 'Retry' : 'Go Back'}</Text>
         </Pressable>
       </SafeAreaView>
@@ -114,48 +134,73 @@ export default function EventDetailsScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {event.imageUrl ? <Image source={{ uri: event.imageUrl }} style={styles.image} /> : (
-          <View style={styles.imagePlaceholder}><AppIcon color={colors.primary} name="events" size={42} /></View>
-        )}
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} style={styles.scroll}>
         <Text style={styles.title}>{event.title}</Text>
+        <View style={styles.infoCard}>
+          <InfoRow icon="events" text={event.date || 'Date not provided'} />
+          <InfoRow icon="events" text={event.time || 'Time not provided'} />
+          <InfoRow icon="clubs" text={event.location || 'Location not provided'} />
+          <InfoRow icon="user" text={`Organized by ${club?.name || 'SCC'}`} last />
+        </View>
         <View style={styles.bookmarkRow}>
           <Text style={styles.bookmarkLabel}>{bookmark.bookmarked ? 'Saved to bookmarks' : 'Save this event'}</Text>
           <BookmarkButton bookmarked={bookmark.bookmarked} disabled={bookmark.loading} label="event" onPress={bookmark.toggle} />
         </View>
-        <View style={styles.infoCard}>
-          <Text style={styles.infoLabel}>Date</Text><Text style={styles.infoValue}>{event.date || 'Date not provided'}</Text>
-          <Text style={styles.infoLabel}>Time</Text><Text style={styles.infoValue}>{event.time || 'Time not provided'}</Text>
-          <Text style={styles.infoLabel}>Location</Text><Text style={styles.infoValue}>{event.location || 'Location not provided'}</Text>
-          <Text style={styles.infoLabel}>Club</Text><Text style={styles.infoValue}>{club?.name || 'Club information unavailable'}</Text>
-        </View>
-        <Text style={styles.sectionTitle}>About this event</Text>
-        <Text style={styles.description}>{event.description || 'No description available.'}</Text>
-        {message ? <Text style={styles.message}>{message}</Text> : null}
-        <Pressable disabled={actionLoading} onPress={handleRegistration} style={[styles.button, actionLoading && styles.disabled]}>
-          {actionLoading ? <ActivityIndicator color={colors.white} /> : <Text style={styles.buttonText}>{registered ? 'Cancel Registration' : 'Register for Event'}</Text>}
-        </Pressable>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
+          {['Upcoming Events', 'Announcements', 'About', ...(role === 'admin' || (role === 'president' && userProfile?.presidentOf === event.clubId) ? ['Club Members'] : [])].map((item) => (
+            <Pressable accessibilityRole="tab" accessibilityState={{ selected: tab === item }} key={item} onPress={() => setTab(item)} style={[styles.tab, tab === item && styles.activeTab]}>
+              <Text style={[styles.tabText, tab === item && styles.activeTabText]}>{item}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+        {tab === 'About' ? <View style={styles.sectionCard}><Text style={styles.sectionTitle}>About This Event</Text><Text style={styles.description}>{event.description || 'No description available.'}</Text></View> : null}
+        {tab === 'Upcoming Events' ? <View>{clubEvents.length ? clubEvents.map((item) => <Pressable key={item.id} onPress={() => navigation.push('EventDetails', { eventId: item.id })} style={styles.relatedCard}><Text style={styles.relatedTitle}>{item.title}</Text><Text style={styles.relatedMeta}>{item.date} · {item.time}</Text><Text style={styles.relatedMeta}>{item.location}</Text></Pressable>) : <Text style={styles.empty}>No other events for this club yet.</Text>}</View> : null}
+        {tab === 'Announcements' ? <View>{announcements.length ? announcements.map((item) => <AnnouncementCard announcement={item} key={item.id} />) : <Text style={styles.empty}>No announcements for this club yet.</Text>}</View> : null}
+        {tab === 'Club Members' ? <View>{members.length ? members.map((item) => <View key={item.userId} style={styles.memberRow}><AppIcon color={colors.secondaryText} name="user" /><Text style={styles.relatedTitle}>{item.displayName || 'Club member'}</Text></View>) : <Text style={styles.empty}>No club members to show.</Text>}</View> : null}
+        <View style={styles.registeredCard}><Text style={styles.sectionTitle}>Registered Students</Text><Text style={styles.description}>{Number.isInteger(event.registrationCount) ? `${event.registrationCount} registered` : registered ? 'You are registered for this event.' : 'Register to reserve your place.'}</Text></View>
       </ScrollView>
+      <StickyActionBar
+        disabled={actionLoading}
+        loading={actionLoading}
+        message={message}
+        onPress={handleRegistration}
+        title={registered ? 'Cancel Registration' : 'Register'}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
+  scroll: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   centered: { alignItems: 'center', backgroundColor: colors.background, flex: 1, justifyContent: 'center', padding: spacing.xxl },
-  image: { borderRadius: radii.card, height: 190, width: '100%' },
-  imagePlaceholder: { alignItems: 'center', backgroundColor: '#E8EEF7', borderRadius: radii.card, height: 190, justifyContent: 'center' },
-  title: { color: colors.text, marginTop: spacing.lg, textAlign: 'center', ...typography.screenTitle },
+  title: { color: colors.text, marginBottom: spacing.md, marginTop: spacing.sm, textAlign: 'center', ...typography.screenTitle },
   bookmarkRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md },
   bookmarkLabel: { color: colors.secondaryText, ...typography.secondary },
-  infoCard: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.card, borderWidth: 1, marginTop: spacing.xl, padding: spacing.lg },
-  infoLabel: { color: colors.secondaryText, marginTop: spacing.sm, ...typography.caption },
-  infoValue: { color: colors.text, marginTop: spacing.xs, ...typography.body },
-  sectionTitle: { color: colors.text, marginTop: spacing.xxl, ...typography.sectionHeading },
-  description: { color: colors.secondaryText, marginTop: spacing.sm, ...typography.body },
-  message: { color: colors.primary, marginTop: spacing.lg, textAlign: 'center', ...typography.secondary },
-  button: { alignItems: 'center', backgroundColor: colors.primary, borderRadius: radii.md, justifyContent: 'center', marginTop: spacing.xl, minHeight: 50, paddingHorizontal: spacing.lg },
-  disabled: { opacity: 0.6 },
-  buttonText: { color: colors.white, fontWeight: '600' },
+  infoCard: { ...componentStyles.card, marginTop: spacing.sm, paddingVertical: spacing.xs },
+  infoRow: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: 'row', gap: spacing.md, paddingVertical: spacing.sm },
+  lastInfoRow: { borderBottomWidth: 0 },
+  infoValue: { color: colors.text, flex: 1, ...typography.secondary },
+  tabs: { gap: spacing.xs, paddingVertical: spacing.lg },
+  tab: { borderColor: colors.border, borderRadius: 20, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  activeTab: { backgroundColor: colors.primary, borderColor: colors.primary },
+  tabText: { color: colors.secondaryText, ...typography.caption },
+  activeTabText: { color: colors.white },
+  sectionCard: { ...componentStyles.card },
+  sectionTitle: { color: colors.text, ...typography.cardTitle },
+  description: { color: colors.secondaryText, marginTop: spacing.sm, ...typography.caption },
+  relatedCard: { ...componentStyles.card, marginBottom: spacing.sm },
+  relatedTitle: { color: colors.text, ...typography.cardTitle },
+  relatedMeta: { color: colors.secondaryText, marginTop: spacing.xs, ...typography.caption },
+  memberRow: { ...componentStyles.card, alignItems: 'center', flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xs },
+  empty: { color: colors.secondaryText, paddingVertical: spacing.lg, textAlign: 'center', ...typography.secondary },
+  registeredCard: { ...componentStyles.card, marginTop: spacing.lg },
+  button: { ...componentStyles.primaryButton, marginTop: spacing.xl },
+  buttonText: { color: colors.white, ...typography.label },
+  pressed: componentStyles.pressed,
 });
+
+function InfoRow({ icon, text, last }) {
+  return <View style={[styles.infoRow, last && styles.lastInfoRow]}><AppIcon color={colors.secondaryText} name={icon} size={17} /><Text style={styles.infoValue}>{text}</Text></View>;
+}

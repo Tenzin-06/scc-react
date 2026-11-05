@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppIcon from '../../components/AppIcon';
 import { useAuth } from '../../contexts/AuthContext';
 import { getRegisteredEvents } from '../../repositories/eventRegistrationRepository';
-import { colors, radii, spacing, typography } from '../../theme';
+import { getJoinedClubs } from '../../repositories/membershipRepository';
+import { colors, componentStyles, radii, spacing, typography } from '../../theme';
 
 const menuItems = [
   { icon: 'edit', label: 'Edit Profile' },
@@ -18,9 +20,9 @@ const menuItems = [
 
 function ProfileRow({ icon, label, onPress }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.menuRow}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}>
       <View style={styles.menuIcon}>
-        <AppIcon color={label === 'Logout' ? '#D91C2B' : colors.secondaryText} name={icon} />
+        <AppIcon color={label === 'Logout' ? colors.dark : colors.secondaryText} name={icon} />
       </View>
       <Text style={styles.menuLabel}>{label}</Text>
       <Text style={styles.chevron}>›</Text>
@@ -31,6 +33,7 @@ function ProfileRow({ icon, label, onPress }) {
 export default function ProfileScreen({ navigation }) {
   const { logout, user, userProfile } = useAuth();
   const [registeredEventCount, setRegisteredEventCount] = useState(null);
+  const [joinedClubCount, setJoinedClubCount] = useState(null);
   const displayName = userProfile?.fullName || user?.displayName || 'Student';
   const normalizedRole = userProfile?.role?.trim().toLowerCase();
   const role = normalizedRole === 'admin'
@@ -44,25 +47,31 @@ export default function ProfileScreen({ navigation }) {
       ? { icon: 'clubs', label: 'President Dashboard', route: 'PresidentDashboard' }
       : null;
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let active = true;
     if (!user?.uid) {
       setRegisteredEventCount(null);
-      return undefined;
+      setJoinedClubCount(null);
+      return () => { active = false; };
     }
 
-    getRegisteredEvents(user.uid)
-      .then((events) => {
-        if (active) setRegisteredEventCount(events.length);
-      })
-      .catch(() => {
-        if (active) setRegisteredEventCount(null);
+    Promise.all([getJoinedClubs(user.uid), getRegisteredEvents(user.uid)])
+      .then(([clubs, events]) => {
+        if (active) {
+          setJoinedClubCount(clubs.length);
+          setRegisteredEventCount(events.length);
+        }
+      }).catch(() => {
+        if (active) {
+          setJoinedClubCount(null);
+          setRegisteredEventCount(null);
+        }
       });
 
     return () => {
       active = false;
     };
-  }, [user?.uid]);
+  }, [user?.uid]));
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.container}>
@@ -80,9 +89,10 @@ export default function ProfileScreen({ navigation }) {
           <Text style={styles.role}>{role}</Text>
         </View>
 
+        <Text style={styles.sectionTitle}>Your activity</Text>
         <View style={styles.statsCard}>
           <View style={styles.stat}>
-            <Text style={styles.statValue}>3</Text>
+            <Text style={styles.statValue}>{joinedClubCount ?? '—'}</Text>
             <Text style={styles.statLabel}>Clubs Joined</Text>
           </View>
           <View style={styles.statDivider} />
@@ -92,13 +102,14 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
 
-        <View style={styles.detailsCard}>
-          <ProfileDetail label="Email" value={userProfile?.email || user?.email} />
-          <ProfileDetail label="Student ID" value={userProfile?.studentId} />
-          <ProfileDetail label="Programme" value={userProfile?.programme} />
-          <ProfileDetail label="Department" value={userProfile?.department} />
-          <ProfileDetail label="Semester" value={userProfile?.semester} />
-          <ProfileDetail label="Phone" value={userProfile?.phone} />
+        <Text style={styles.sectionTitle}>Profile details</Text>
+        <View style={styles.detailsList}>
+          <ProfileDetail icon="user" label="Email" value={userProfile?.email || user?.email} />
+          <ProfileDetail icon="user" label="Student ID" value={userProfile?.studentId} />
+          <ProfileDetail icon="settings" label="Programme" value={userProfile?.programme} />
+          <ProfileDetail icon="clubs" label="Department" value={userProfile?.department} />
+          <ProfileDetail icon="events" label="Semester" value={userProfile?.semester} />
+          <ProfileDetail icon="user" label="Phone" value={userProfile?.phone} />
         </View>
 
         <View style={styles.menuCard}>
@@ -135,11 +146,14 @@ export default function ProfileScreen({ navigation }) {
   );
 }
 
-function ProfileDetail({ label, value }) {
+function ProfileDetail({ icon, label, value }) {
   return (
     <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value || 'Not provided'}</Text>
+      <AppIcon color={colors.secondaryText} name={icon} size={18} />
+      <View style={styles.detailText}>
+        <Text style={styles.detailLabel}>{label}</Text>
+        <Text style={styles.detailValue}>{value || 'Not provided'}</Text>
+      </View>
     </View>
   );
 }
@@ -171,6 +185,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     ...typography.sectionHeading,
   },
+  sectionTitle: {
+    color: colors.text,
+    marginBottom: spacing.sm,
+    marginHorizontal: spacing.lg,
+    ...typography.cardTitle,
+  },
   profileHeader: {
     alignItems: 'center',
     paddingBottom: spacing.lg,
@@ -178,7 +198,7 @@ const styles = StyleSheet.create({
   },
   avatar: {
     alignItems: 'center',
-    backgroundColor: '#E8EBEF',
+    backgroundColor: colors.chip,
     borderRadius: 56,
     height: 96,
     justifyContent: 'center',
@@ -199,11 +219,8 @@ const styles = StyleSheet.create({
     ...typography.caption,
   },
   statsCard: {
+    ...componentStyles.card,
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: spacing.md,
@@ -211,32 +228,26 @@ const styles = StyleSheet.create({
     minHeight: 50,
     paddingVertical: spacing.sm,
   },
-  detailsCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    marginBottom: spacing.md,
+  detailsList: {
     marginHorizontal: spacing.lg,
-    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
   },
   detailRow: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: spacing.md,
     paddingVertical: spacing.md,
   },
+  detailText: { flex: 1 },
   detailLabel: {
     color: colors.secondaryText,
-    flex: 1,
     ...typography.caption,
   },
   detailValue: {
     color: colors.text,
-    flex: 1,
-    textAlign: 'right',
+    marginTop: spacing.xs,
     ...typography.secondary,
   },
   stat: {
@@ -253,7 +264,7 @@ const styles = StyleSheet.create({
     ...typography.caption,
   },
   statDivider: {
-    backgroundColor: '#E4E7EB',
+    backgroundColor: colors.border,
     height: 28,
     width: 1,
   },
@@ -286,7 +297,7 @@ const styles = StyleSheet.create({
     ...typography.secondary,
   },
   chevron: {
-    color: '#B8BEC6',
+    color: colors.secondaryText,
     fontSize: 25,
     fontWeight: '300',
   },
@@ -306,4 +317,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     ...typography.secondary,
   },
+  pressed: componentStyles.pressed,
 });

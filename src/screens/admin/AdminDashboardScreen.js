@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 import AppIcon from '../../components/AppIcon';
 import { getAdminDashboardStats } from '../../repositories/adminRepository';
-import { colors, spacing, typography } from '../../theme';
+import { colors, componentStyles, spacing, typography } from '../../theme';
 
 const statItems = [
   ['students', 'Total Students'],
@@ -83,16 +83,15 @@ const styles = StyleSheet.create({
   title: { color: colors.text, ...typography.screenTitle },
   welcome: { color: colors.secondaryText, marginTop: spacing.sm, ...typography.secondary },
   loader: { marginVertical: spacing.xl },
-  error: { color: '#B42318', marginTop: spacing.lg, textAlign: 'center' },
+  error: { color: colors.dark, marginTop: spacing.lg, textAlign: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xl },
-  stat: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 12, borderWidth: 1, padding: spacing.md, width: '48%' },
+  stat: [componentStyles.card, componentStyles.compactCard, { flexGrow: 1, flexBasis: '47%' }],
   value: { color: colors.primary, ...typography.screenTitle },
   label: { color: colors.secondaryText, marginTop: spacing.xs, ...typography.caption },
   secondaryButton: { alignItems: 'center', borderColor: colors.primary, borderRadius: 10, borderWidth: 1, marginTop: spacing.lg, padding: spacing.md },
   secondaryText: { color: colors.primary, fontWeight: '600' },
   section: { color: colors.text, marginTop: spacing.xxl, ...typography.sectionHeading },
-  action: { alignItems: 'center', backgroundColor: colors.surface, borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: 'row', minHeight: 52, paddingHorizontal: spacing.md },
+  action: [componentStyles.card, componentStyles.compactCard, { alignItems: 'center', flexDirection: 'row', marginTop: spacing.sm, minHeight: 56 }],
   actionIcon: { alignItems: 'center', width: 28 },
   actionText: { color: colors.text, flex: 1, marginLeft: spacing.sm, ...typography.secondary },
-  chevron: { color: '#B8BEC6', fontSize: 25, fontWeight: '300' },
 });

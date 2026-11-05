@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 
 import {
@@ -18,6 +18,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState(null);
+  const provisioningProfile = useRef(false);
 
   async function loadUserProfile(nextUser) {
     if (!nextUser) {
@@ -42,6 +43,11 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
       setUser(nextUser);
+      if (provisioningProfile.current && nextUser) {
+        setProfileLoading(true);
+        setLoading(false);
+        return;
+      }
       await loadUserProfile(nextUser);
       setLoading(false);
     });
@@ -70,9 +76,18 @@ export function AuthProvider({ children }) {
   }
 
   async function register(nextUserData) {
-    const registeredUser = await registerUser(nextUserData);
-    await loadUserProfile(registeredUser);
-    return registeredUser;
+    provisioningProfile.current = true;
+    setProfileLoading(true);
+    setProfileError(null);
+    try {
+      const registeredUser = await registerUser(nextUserData);
+      setUser(registeredUser);
+      await loadUserProfile(registeredUser);
+      return registeredUser;
+    } finally {
+      provisioningProfile.current = false;
+      setProfileLoading(false);
+    }
   }
 
   const value = useMemo(

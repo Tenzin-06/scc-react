@@ -7,7 +7,7 @@ import { AuthSelect } from '../../components/auth/AuthSelect';
 import { createAnnouncement } from '../../repositories/announcementRepository';
 import { updateAnnouncement } from '../../repositories/announcementRepository';
 import { getAllClubs } from '../../repositories/clubRepository';
-import { colors, spacing, typography } from '../../theme';
+import { colors, componentStyles, spacing, typography } from '../../theme';
 
 export default function AddAnnouncementScreen({ navigation, route }) {
   const { user } = useAuth();
@@ -52,7 +52,7 @@ export default function AddAnnouncementScreen({ navigation, route }) {
           value={clubs.find((club) => club.id === form.clubId)?.name || ''}
         />
         {message ? <Text style={styles.message}>{message}</Text> : null}
-        <Pressable disabled={saving} onPress={save} style={styles.button}><Text style={styles.buttonText}>{saving ? 'Saving...' : editingAnnouncement ? 'Update Announcement' : 'Add Announcement'}</Text></Pressable>
+        <Pressable disabled={saving} onPress={save} style={({ pressed }) => [styles.button, pressed && componentStyles.pressed, saving && componentStyles.disabled]}><Text style={styles.buttonText}>{saving ? 'Saving...' : editingAnnouncement ? 'Update Announcement' : 'Add Announcement'}</Text></Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -62,9 +62,9 @@ const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
   content: { padding: spacing.lg },
   title: { color: colors.text, marginBottom: spacing.md, ...typography.screenTitle },
-  input: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 10, borderWidth: 1, color: colors.text, marginBottom: spacing.sm, padding: spacing.md },
+  input: [componentStyles.input, { marginBottom: spacing.sm }],
   multiline: { minHeight: 100, textAlignVertical: 'top' },
-  message: { color: '#B42318', marginBottom: spacing.sm, textAlign: 'center' },
-  button: { backgroundColor: colors.primary, borderRadius: 10, padding: spacing.md },
-  buttonText: { color: colors.white, fontWeight: '600', textAlign: 'center' },
+  message: { color: colors.dark, marginBottom: spacing.sm, textAlign: 'center' },
+  button: componentStyles.primaryButton,
+  buttonText: componentStyles.primaryButtonText,
 });

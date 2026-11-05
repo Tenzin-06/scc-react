@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   },
   optionText: { color: colors.text, fontWeight: '600', ...typography.body },
   deleteOption: { borderBottomWidth: 0 },
-  deleteText: { color: '#B42318', fontWeight: '600', ...typography.body },
+  deleteText: { color: colors.dark, fontWeight: '600', ...typography.body },
   cancel: {
     alignItems: 'center',
     backgroundColor: colors.chip,

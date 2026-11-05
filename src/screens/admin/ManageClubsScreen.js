@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AppIcon from '../../components/AppIcon';
 import ClubCard from '../../components/ClubCard';
 import { getAllClubs } from '../../repositories/clubRepository';
-import { colors, spacing, typography } from '../../theme';
+import { colors, componentStyles, spacing, typography } from '../../theme';
 
 export default function ManageClubsScreen({ navigation }) {
   const [clubs, setClubs] = useState([]);
@@ -48,7 +48,7 @@ export default function ManageClubsScreen({ navigation }) {
           <Text style={styles.message}>{message}</Text>
         </View>}
         ListEmptyComponent={!loading ? <Text style={styles.empty}>No clubs found.</Text> : null}
-        renderItem={({ item }) => <View><ClubCard club={item} onMenu={() => setSelectedClub(item)} /><View style={styles.row}><Text style={styles.meta}>President: {item.presidentId || 'Unassigned'}  •  Members: {item.memberCount || 0}</Text></View></View>}
+        renderItem={({ item }) => <ClubCard club={item} compact metadataLabel="President" metadataValue={item.presidentId || 'Unassigned'} onMenu={() => setSelectedClub(item)} />}
       />
       <Pressable accessibilityLabel="Add club" accessibilityRole="button" onPress={() => navigation.navigate('AddClub')} style={styles.floatingAdd}>
         <AppIcon color={colors.white} name="add" size={24} />
@@ -68,11 +68,9 @@ const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
   content: { padding: spacing.lg, paddingBottom: 96 },
   title: { color: colors.text, ...typography.screenTitle },
-  floatingAdd: { alignItems: 'center', backgroundColor: colors.primary, borderRadius: 28, bottom: spacing.xl, elevation: 5, height: 56, justifyContent: 'center', position: 'absolute', right: spacing.lg, shadowColor: '#000', shadowOffset: { height: 2, width: 0 }, shadowOpacity: 0.2, shadowRadius: 4, width: 56 },
-  input: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 10, borderWidth: 1, color: colors.text, marginTop: spacing.sm, padding: spacing.md },
+  floatingAdd: { ...componentStyles.primaryButton, borderRadius: 28, bottom: spacing.xl, height: 56, paddingHorizontal: 0, position: 'absolute', right: spacing.lg, width: 56 },
+  input: [componentStyles.input, { marginTop: spacing.sm }],
   loader: { marginVertical: spacing.lg },
   message: { color: colors.secondaryText, marginTop: spacing.sm, textAlign: 'center' },
   empty: { color: colors.secondaryText, paddingVertical: spacing.xxl, textAlign: 'center' },
-  row: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.md },
-  meta: { color: colors.secondaryText, flex: 1, ...typography.caption },
 });

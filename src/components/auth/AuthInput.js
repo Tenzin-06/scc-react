@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { colors, spacing, typography } from '../../theme';
+import { colors, radii, spacing, typography } from '../../theme';
 
 export function AuthInput({ label, secureTextEntry = false, showPasswordToggle = false, ...props }) {
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -12,6 +12,7 @@ export function AuthInput({ label, secureTextEntry = false, showPasswordToggle =
       <Text style={styles.label}>{label}</Text>
       <View>
         <TextInput
+          accessibilityLabel={label}
           autoCapitalize="none"
           placeholderTextColor={colors.secondaryText}
           secureTextEntry={isPasswordHidden}
@@ -44,12 +45,12 @@ const styles = StyleSheet.create({
   label: {
     color: colors.text,
     marginBottom: spacing.xs,
-    ...typography.caption,
+    ...typography.label,
   },
   input: {
     backgroundColor: colors.input,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: radii.md,
     borderWidth: 1,
     color: colors.text,
     minHeight: 48,
@@ -64,9 +65,9 @@ const styles = StyleSheet.create({
     height: 48,
     justifyContent: 'center',
     position: 'absolute',
-    right: spacing.sm,
+    right: spacing.xs,
     top: 0,
-    width: 32,
+    width: 40,
   },
   eye: {
     alignItems: 'center',

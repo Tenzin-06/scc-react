@@ -15,7 +15,7 @@ import { getAllEvents, subscribeToAllEvents } from '../../repositories/eventRepo
 import { getJoinedClubs } from '../../repositories/membershipRepository';
 import { getAnnouncementDate } from '../../utils/announcementDate';
 import { isUpcomingEvent, sortEventsByDate } from '../../utils/eventDate';
-import { colors, radii, spacing, typography } from '../../theme';
+import { colors, componentStyles, radii, spacing, typography } from '../../theme';
 
 export default function HomeScreen({ navigation }) {
   const { user, userProfile } = useAuth();
@@ -132,7 +132,6 @@ export default function HomeScreen({ navigation }) {
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Home</Text>
         <Text style={styles.greeting}>{greeting}, {displayName}!</Text>
         <Text style={styles.subtitle}>Welcome back to Student Club Connect.</Text>
 
@@ -149,7 +148,7 @@ export default function HomeScreen({ navigation }) {
             />
           </View>
           <SectionHeader onPress={() => navigation.navigate('Clubs')} title="Popular Clubs" />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <ScrollView contentContainerStyle={styles.clubRail} horizontal showsHorizontalScrollIndicator={false}>
             {filteredClubs.map((club) => (
               <ClubCard club={club} key={club.id} onPress={() => navigation.navigate('ClubDetails', { clubId: club.id })} />
             ))}
@@ -184,7 +183,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.section}>
           <SectionHeader onPress={() => navigation.navigate('MyClubs')} title="My Clubs" />
           {myClubsError ? <Text style={styles.empty}>{myClubsError}</Text> : myClubs.length ? myClubs.map((club) => (
-            <Pressable key={club.id} onPress={() => navigation.navigate('ClubDetails', { clubId: club.id })} style={styles.myClub}>
+            <Pressable key={club.id} onPress={() => navigation.navigate('ClubDetails', { clubId: club.id })} style={({ pressed }) => [styles.myClub, pressed && styles.pressed]}>
               <Text style={styles.myClubName}>{club.name}</Text>
               <Text style={styles.myClubCategory}>{club.category}</Text>
             </Pressable>
@@ -204,13 +203,9 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xxxl,
   },
-  title: {
-    color: colors.text,
-    ...typography.sectionHeading,
-  },
   greeting: {
     color: colors.text,
-    marginTop: spacing.xxl,
+    marginTop: spacing.xs,
     ...typography.screenTitle,
   },
   subtitle: {
@@ -239,11 +234,12 @@ const styles = StyleSheet.create({
   section: {
     marginTop: spacing.xxl,
   },
+  clubRail: {
+    paddingBottom: spacing.xs,
+  },
   myClub: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 10,
-    borderWidth: 1,
+    ...componentStyles.card,
+    marginBottom: spacing.sm,
     padding: spacing.md,
   },
   myClubName: {
@@ -257,6 +253,7 @@ const styles = StyleSheet.create({
   },
   empty: {
     color: colors.secondaryText,
+    marginTop: spacing.sm,
     ...typography.secondary,
   },
   emptySearch: {
@@ -264,4 +261,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     ...typography.secondary,
   },
+  pressed: componentStyles.pressed,
 });

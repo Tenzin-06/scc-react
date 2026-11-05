@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getAdminUsers } from '../../repositories/adminRepository';
 import { updateUserProfileAsAdmin } from '../../repositories/userRepository';
-import { colors, spacing, typography } from '../../theme';
+import { colors, componentStyles, spacing, typography } from '../../theme';
 
 const roles = ['all', 'student', 'president', 'admin'];
 
@@ -111,20 +111,20 @@ export default function ManageUsersScreen() {
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
   content: { padding: spacing.lg },
-  input: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 10, borderWidth: 1, color: colors.text, padding: spacing.md },
+  input: componentStyles.input,
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginVertical: spacing.md },
-  chip: { backgroundColor: colors.chip, borderRadius: 20, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  chip: [componentStyles.chip, { minHeight: 44 }],
   activeChip: { backgroundColor: colors.primary },
   chipText: { color: colors.text },
   activeChipText: { color: colors.white },
   loader: { marginVertical: spacing.xl },
-  error: { color: '#B42318', textAlign: 'center' },
+  error: { color: colors.dark, textAlign: 'center' },
   empty: { color: colors.secondaryText, paddingVertical: spacing.xxl, textAlign: 'center' },
-  card: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 10, borderWidth: 1, marginTop: spacing.sm, padding: spacing.md },
+  card: [componentStyles.card, componentStyles.compactCard, { marginTop: spacing.sm }],
   name: { color: colors.text, ...typography.cardTitle },
   meta: { color: colors.secondaryText, marginTop: spacing.xs, ...typography.caption },
-  detailInput: { backgroundColor: colors.input, borderColor: colors.border, borderRadius: 8, borderWidth: 1, color: colors.text, marginTop: spacing.sm, padding: spacing.sm },
-  saveButton: { backgroundColor: colors.primary, borderRadius: 8, marginTop: spacing.md, padding: spacing.sm },
-  saveText: { color: colors.white, fontWeight: '600', textAlign: 'center' },
+  detailInput: [componentStyles.input, { marginTop: spacing.sm }],
+  saveButton: [componentStyles.primaryButton, { marginTop: spacing.md }],
+  saveText: componentStyles.primaryButtonText,
   details: { color: colors.text, lineHeight: 22, marginTop: spacing.md },
 });

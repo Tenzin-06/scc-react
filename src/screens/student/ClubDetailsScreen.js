@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppIcon from '../../components/AppIcon';
 import BookmarkButton from '../../components/BookmarkButton';
+import StickyActionBar from '../../components/StickyActionBar';
 import { useAuth } from '../../contexts/AuthContext';
 import useBookmark from '../../hooks/useBookmark';
 import { getClubById } from '../../repositories/clubRepository';
@@ -22,8 +23,7 @@ import {
   joinClub,
   leaveClub,
 } from '../../repositories/membershipRepository';
-import { getUserProfile } from '../../repositories/userRepository';
-import { colors, radii, spacing, typography } from '../../theme';
+import { colors, componentStyles, radii, spacing, typography } from '../../theme';
 
 export default function ClubDetailsScreen({ navigation, route }) {
   const { user } = useAuth();
@@ -59,7 +59,7 @@ export default function ClubDetailsScreen({ navigation, route }) {
         await getClubMemberCount(clubId).catch(() => nextClub.memberCount || 0),
       );
       setIsMember(await checkMembership(clubId, user.uid));
-      setPresident(nextClub.presidentId ? await getUserProfile(nextClub.presidentId) : null);
+      setPresident(nextClub.presidentId ? { fullName: nextClub.presidentName || null } : null);
     } catch (loadError) {
       setError(loadError.message || 'Unable to load club details.');
     } finally {
@@ -132,7 +132,7 @@ export default function ClubDetailsScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} style={styles.scroll}>
         {club.imageUrl ? (
           <Image source={{ uri: club.imageUrl }} style={styles.image} />
         ) : (
@@ -150,7 +150,7 @@ export default function ClubDetailsScreen({ navigation, route }) {
 
         <View style={styles.infoCard}>
           <Text style={styles.infoLabel}>President</Text>
-          <Text style={styles.infoValue}>{president?.fullName || 'President not assigned'}</Text>
+        <Text style={styles.infoValue}>{president?.fullName || (club.presidentId ? 'Assigned president' : 'President not assigned')}</Text>
           <Text style={styles.infoLabel}>Members</Text>
           <Text style={styles.infoValue}>{memberCount} Members</Text>
         </View>
@@ -161,25 +161,21 @@ export default function ClubDetailsScreen({ navigation, route }) {
           <Text style={styles.eventText}>Check back later for club events.</Text>
         </View>
 
-        {message ? <Text style={styles.message}>{message}</Text> : null}
-        <Pressable
-          disabled={actionLoading}
-          onPress={isMember ? handleLeave : handleJoin}
-          style={[styles.actionButton, actionLoading && styles.disabledButton]}
-        >
-          {actionLoading ? (
-            <ActivityIndicator color={colors.white} />
-          ) : (
-            <Text style={styles.actionText}>{isMember ? 'Leave Club' : 'Join Club'}</Text>
-          )}
-        </Pressable>
       </ScrollView>
+      <StickyActionBar
+        disabled={actionLoading}
+        loading={actionLoading}
+        message={message}
+        onPress={isMember ? handleLeave : handleJoin}
+        title={isMember ? 'Leave Club' : 'Join Club'}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.background, flex: 1 },
+  scroll: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   centered: {
     alignItems: 'center',
@@ -191,7 +187,7 @@ const styles = StyleSheet.create({
   image: { borderRadius: radii.card, height: 190, width: '100%' },
   imagePlaceholder: {
     alignItems: 'center',
-    backgroundColor: '#E8EEF7',
+    backgroundColor: colors.background,
     borderRadius: radii.card,
     height: 190,
     justifyContent: 'center',
@@ -202,39 +198,21 @@ const styles = StyleSheet.create({
   bookmarkLabel: { color: colors.secondaryText, ...typography.secondary },
   description: { color: colors.secondaryText, marginTop: spacing.md, ...typography.body },
   infoCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.card,
-    borderWidth: 1,
+    ...componentStyles.card,
     marginTop: spacing.xl,
-    padding: spacing.lg,
   },
   infoLabel: { color: colors.secondaryText, marginTop: spacing.sm, ...typography.caption },
   infoValue: { color: colors.text, marginTop: spacing.xs, ...typography.body },
   sectionTitle: { color: colors.text, marginTop: spacing.xxl, ...typography.sectionHeading },
   eventCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
+    ...componentStyles.card,
     marginTop: spacing.md,
-    padding: spacing.lg,
   },
   eventTitle: { color: colors.text, ...typography.cardTitle },
   eventText: { color: colors.secondaryText, marginTop: spacing.xs, ...typography.caption },
-  message: { color: colors.primary, marginTop: spacing.lg, textAlign: 'center', ...typography.secondary },
-  actionButton: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: radii.md,
-    marginTop: spacing.xl,
-    minHeight: 50,
-    justifyContent: 'center',
-  },
-  disabledButton: { opacity: 0.6 },
-  actionText: { color: colors.white, fontWeight: '600' },
   errorTitle: { color: colors.text, textAlign: 'center', ...typography.sectionHeading },
   errorText: { color: colors.secondaryText, marginTop: spacing.sm, textAlign: 'center', ...typography.secondary },
-  primaryButton: { backgroundColor: colors.primary, borderRadius: radii.md, marginTop: spacing.xl, paddingHorizontal: spacing.xxl, paddingVertical: spacing.md },
-  primaryButtonText: { color: colors.white, fontWeight: '600' },
+  primaryButton: { ...componentStyles.primaryButton, marginTop: spacing.xl },
+  primaryButtonText: { color: colors.white, ...typography.label },
+  pressed: componentStyles.pressed,
 });

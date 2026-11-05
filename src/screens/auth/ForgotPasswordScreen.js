@@ -45,12 +45,14 @@ export default function ForgotPasswordScreen({ navigation }) {
     <AuthScreen>
       <AuthHeader />
       <AuthTitle
-        description="Enter your registered email address and we will send you a password reset link."
-        title="Forgot Password?"
+        description="Enter your registered email address to receive a password reset link."
+        title="Reset your password"
       />
       <AuthMessage>{error}</AuthMessage>
       <AuthMessage type="success">{success}</AuthMessage>
       <AuthInput
+        autoComplete="email"
+        autoCapitalize="none"
         keyboardType="email-address"
         label="Email Address"
         onChangeText={setEmail}
@@ -58,8 +60,8 @@ export default function ForgotPasswordScreen({ navigation }) {
         value={email}
       />
       <AuthButton loading={loading} onPress={handleResetPassword} title="Send Reset Link" />
-      <Pressable onPress={() => navigation.navigate('Login')} style={styles.backButton}>
-        <Text style={styles.link}>Back to Login</Text>
+      <Pressable accessibilityRole="button" onPress={() => navigation.navigate('Login')} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
+        <Text style={styles.link}>Back to log in</Text>
       </Pressable>
     </AuthScreen>
   );
@@ -69,9 +71,14 @@ const styles = StyleSheet.create({
   backButton: {
     alignSelf: 'center',
     marginTop: spacing.xxl,
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
   },
   link: {
     color: colors.primary,
     ...typography.label,
+    textDecorationLine: 'underline',
   },
+  pressed: { opacity: 0.65 },
 });
