@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,10 +6,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import EventCard from '../../components/EventCard';
 import { useAuth } from '../../contexts/AuthContext';
 import { addBookmark, getUserBookmarks, removeBookmark } from '../../repositories/bookmarkRepository';
-import { getAllEvents } from '../../repositories/eventRepository';
+import { getAllEvents, subscribeToAllEvents } from '../../repositories/eventRepository';
 import { getClubById } from '../../repositories/clubRepository';
 import { colors, spacing, typography } from '../../theme';
-import { isUpcomingEvent, sortEventsByDate } from '../../utils/eventDate';
+import { sortEventsByDate } from '../../utils/eventDate';
 
 export default function EventsScreen({ navigation }) {
   const { user } = useAuth();
@@ -19,13 +19,12 @@ export default function EventsScreen({ navigation }) {
   const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
   const [bookmarkLoadingId, setBookmarkLoadingId] = useState(null);
 
-  const loadEvents = useCallback(async () => {
-    setLoading(true);
+  const loadEvents = useCallback(async (latestEvents) => {
     setError('');
     try {
-      const allEvents = await getAllEvents();
-      const upcomingEvents = sortEventsByDate(allEvents.filter((event) => isUpcomingEvent(event)));
-      const enrichedEvents = await Promise.all(upcomingEvents.map(async (event) => {
+      const allEvents = latestEvents || await getAllEvents();
+      const sortedEvents = sortEventsByDate(allEvents);
+      const enrichedEvents = await Promise.all(sortedEvents.map(async (event) => {
         if (!event.clubId) return event;
         const club = await getClubById(event.clubId).catch(() => null);
         return { ...event, clubName: club?.name || 'Club information unavailable' };
@@ -63,6 +62,14 @@ export default function EventsScreen({ navigation }) {
     }
   }
 
+  useEffect(() => subscribeToAllEvents(
+    loadEvents,
+    (loadError) => {
+      setError(loadError.message || 'Unable to load events. Please check your connection and try again.');
+      setLoading(false);
+    },
+  ), [loadEvents]);
+
   useFocusEffect(useCallback(() => {
     loadEvents();
   }, [loadEvents]));
@@ -89,11 +96,11 @@ export default function EventsScreen({ navigation }) {
         keyExtractor={(event) => event.id}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No upcoming events at the moment.</Text>
-            <Text style={styles.emptyMessage}>Please check back later for new events.</Text>
+            <Text style={styles.emptyTitle}>No events available at the moment.</Text>
+            <Text style={styles.emptyMessage}>Events will appear here once they are created.</Text>
           </View>
         }
-        ListHeaderComponent={<Text style={styles.heading}>Upcoming Events</Text>}
+        ListHeaderComponent={<Text style={styles.heading}>Events</Text>}
         renderItem={({ item }) => (
           <EventCard event={item} bookmarked={bookmarkedIds.has(item.id)} bookmarkLoading={bookmarkLoadingId === item.id} onBookmark={() => toggleBookmark(item.id)} onPress={() => navigation.navigate('EventDetails', { eventId: item.id })} />
         )}

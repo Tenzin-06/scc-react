@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   serverTimestamp,
   updateDoc,
 } from 'firebase/firestore';
@@ -12,6 +13,8 @@ import {
 import { db } from '../services/firebase';
 
 const eventsCollection = collection(db, 'events');
+const eventListeners = new Set();
+let unsubscribeFromEvents = null;
 const editableFields = new Set([
   'title',
   'description',
@@ -67,6 +70,33 @@ function toEvent(snapshot) {
   return {
     ...snapshot.data(),
     id: snapshot.id,
+  };
+}
+
+export function subscribeToAllEvents(onEvents, onError) {
+  const subscriber = { onEvents, onError };
+  eventListeners.add(subscriber);
+
+  if (!unsubscribeFromEvents) {
+    unsubscribeFromEvents = onSnapshot(
+      eventsCollection,
+      (snapshot) => {
+        const events = snapshot.docs.map(toEvent);
+        eventListeners.forEach((listener) => listener.onEvents(events));
+      },
+      (error) => {
+        const readError = createEventError(getEventErrorMessage(error, 'read'), error?.code);
+        eventListeners.forEach((listener) => listener.onError?.(readError));
+      },
+    );
+  }
+
+  return () => {
+    eventListeners.delete(subscriber);
+    if (eventListeners.size === 0 && unsubscribeFromEvents) {
+      unsubscribeFromEvents();
+      unsubscribeFromEvents = null;
+    }
   };
 }
 

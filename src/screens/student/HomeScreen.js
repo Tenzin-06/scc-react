@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,7 +11,7 @@ import SectionHeader from '../../components/SectionHeader';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAllClubs, getClubById } from '../../repositories/clubRepository';
 import { getRecentAnnouncements } from '../../repositories/announcementRepository';
-import { getAllEvents } from '../../repositories/eventRepository';
+import { getAllEvents, subscribeToAllEvents } from '../../repositories/eventRepository';
 import { getJoinedClubs } from '../../repositories/membershipRepository';
 import { getAnnouncementDate } from '../../utils/announcementDate';
 import { isUpcomingEvent, sortEventsByDate } from '../../utils/eventDate';
@@ -81,10 +81,10 @@ export default function HomeScreen({ navigation }) {
     }
   }, []);
 
-  const loadUpcomingEvents = useCallback(async () => {
+  const loadUpcomingEvents = useCallback(async (latestEvents) => {
     try {
       setEventsError('');
-      const allEvents = await getAllEvents();
+      const allEvents = latestEvents || await getAllEvents();
       const upcoming = sortEventsByDate(allEvents.filter((event) => isUpcomingEvent(event)));
       const enriched = await Promise.all(upcoming.slice(0, 3).map(async (event) => {
         const club = event.clubId ? await getClubById(event.clubId).catch(() => null) : null;
@@ -106,6 +106,11 @@ export default function HomeScreen({ navigation }) {
     loadAnnouncements();
     loadUpcomingEvents();
   }, [loadMyClubs, loadPopularClubs, loadAnnouncements, loadUpcomingEvents]));
+
+  useEffect(() => subscribeToAllEvents(
+    loadUpcomingEvents,
+    (error) => setEventsError(error.message || 'Unable to load upcoming events.'),
+  ), [loadUpcomingEvents]);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
